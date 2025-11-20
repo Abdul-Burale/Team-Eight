@@ -1,5 +1,41 @@
+import {supabase} from "../supabase/client.ts"
 import logo from '../assets/logo.png'
-export default function Login() {
+import { useNavigate } from "react-router-dom";
+import {useState} from "react"
+
+async function handleLogin(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
+  });
+
+
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  return { success: true, user: data.user };
+}
+
+export default function SignIn() {
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+
+  const submitForm = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const result = await handleLogin(email, password);
+    
+    if(!result.success) {
+      setErrorMsg("Incorrect email or password.");
+      return;
+    }
+
+    navigate("/");
+
+  }
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4 py-12">
         <div className="bg-white flex flex-col gap-6 rounded-xl border w-full max-w-md shadow-sm">
@@ -11,6 +47,7 @@ export default function Login() {
                 src={logo}
                 alt="Logo"
                 className="h-20 w-auto"
+                onClick={() => navigate('/')}
               />
             </div>
             <h4 className="text-2xl font-semibold">Welcome Back</h4>
@@ -19,8 +56,10 @@ export default function Login() {
   
           {/* Form */}
           <div className="px-6 pb-6">
-            <form className="space-y-4">
-  
+            <form className="space-y-4" onSubmit={submitForm}>
+
+              {errorMsg && (<div className="text-red-600 text-sm">{errorMsg}</div>)}
+
               {/* Email */}
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
@@ -29,6 +68,8 @@ export default function Login() {
                 <input
                   id="email"
                   type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   placeholder="your.email@example.com"
                   autoComplete="email"
                   className="w-full h-10 rounded-md border px-3 py-1 bg-white text-sm outline-none
@@ -45,6 +86,8 @@ export default function Login() {
                 <input
                   id="password"
                   type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter your password"
                   autoComplete="current-password"
                   className="w-full h-10 rounded-md border px-3 py-1 bg-white text-sm outline-none
@@ -72,7 +115,7 @@ export default function Login() {
               {/* Sign Up */}
               <div className="text-center text-sm text-gray-600">
                 Don't have an account?{" "}
-                <button type="button" className="text-blue-600 hover:underline">
+                <button type="button" onClick={() => navigate("/signup")} className="text-blue-600 hover:underline">
                   Sign up
                 </button>
               </div>
