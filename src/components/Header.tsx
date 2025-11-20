@@ -10,7 +10,9 @@ import { NavButton } from './NavButton';
 export function Header() {
     const navigate = useNavigate();
     const location = useLocation();
-    const { user } = useAuth();
+    const { user, loading } = useAuth();
+
+    if (loading) return null;
 
     const navItems = [
         {to: '/', id: 'home', label: 'Home', icon: Home},
