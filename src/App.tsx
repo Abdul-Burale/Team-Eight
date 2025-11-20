@@ -13,21 +13,18 @@ function App() {
   const hideLayout = authPages.includes(location.pathname);
 
   return (
-    <div className="full-background min-h-screen flex flex-col">
+    <div className="bg-blue-50 min-h-screen flex flex-col">
 
       {/* Header only on NON-auth pages */}
       {!hideLayout && <Header />}
 
-      {/* Main Page Content */}
-      <div className="flex-grow relative overflow-y-auto max-h-screen">
+      <main className="flex-grow">
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
         </Routes>
-      </div>
-
-      {/* Footer only on NON-auth pages */}
+      </main>
       {!hideLayout && <Footer />}
     </div>
   );

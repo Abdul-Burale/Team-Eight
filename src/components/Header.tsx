@@ -30,7 +30,6 @@ export function Header() {
 
 
     return (
-        <div className="flex flex-col bg-grey">
             <header className="sticky top-0 z-50 h-[80px] bg-white shadow-sm">
                 <div className="container mx-auto px-4 py-4">
                     <div className="flex items-center justify-between">
@@ -69,7 +68,6 @@ export function Header() {
             </div>
 
         </header>
-        </div>
     )
 } 
 
