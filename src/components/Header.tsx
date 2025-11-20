@@ -1,11 +1,16 @@
 import { Bell, Home, Info, LogIn, Phone, Search, TrendingUp } from 'lucide-react';
 import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "../supabase/client";
+import { useAuth } from '../context/AuthContext'
 import logo from '../assets/logo.png'
 import { NavButton } from './NavButton';
+
+
 
 export function Header() {
     const navigate = useNavigate();
     const location = useLocation();
+    const { user } = useAuth();
 
     const navItems = [
         {to: '/', id: 'home', label: 'Home', icon: Home},
@@ -15,6 +20,11 @@ export function Header() {
         {to: '/contact', id: 'contact', label: 'Contact', icon: Phone},
         {to: '/about', id: 'about', label: 'About', icon: Info}
     ];
+
+    async function handleSignOut() {
+        await supabase.auth.signOut();
+        navigate('/')
+    }
 
 
     return (
@@ -27,7 +37,8 @@ export function Header() {
                         </div>
 
                         <nav className="hidden md:flex items-center gap-2">
-                            {navItems.map((item) => (
+                            {navItems.filter(item => !item.protected || (item.protected && user))
+                            .map((item) => (
                                 <NavButton
                                     key={item.id}
                                     id={item.id}
@@ -41,10 +52,15 @@ export function Header() {
                         </nav>
                 
                 
+                {/* Auth Buttons -> Conditional Rendering */}
                 <div className="flex flex-row mt-1">
-                <NavButton id="/signin" label="Sign In" icon={LogIn} onClick={() => navigate('/signin')} />
+                {!user ? (
+                <>
+                <NavButton id="/signin" label="Sign In" icon={LogIn} onClick={() => navigate("/signin")} />
                 <div className="m-2"></div>
-                <NavButton id="/signup" label="Sign Up" active={location.pathname === "/signup"} onClick={() => navigate('/signup')} />
+                <NavButton id="/signup" label="Sign Up" active={location.pathname === "/signup"} onClick={() => navigate("/signup")}/>
+                </>
+                ) : (<NavButton id="/signout" label="Sign Out" icon={LogIn} onClick={handleSignOut} active={true}/>)}
                 </div>
             </div>
     
