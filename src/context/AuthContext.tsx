@@ -16,29 +16,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Initial load
   useEffect(() => {
-    async function loadUser() {
-      const { data } = await supabase.auth.getSession();
+    // On first load
+    supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
       setLoading(false);
-    }
+    });
 
-    loadUser();
-
-    // Listen for login, logout, refresh, etc
-    const { data: listener } = supabase.auth.onAuthStateChange(
+    // Listen to changes
+    const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
       }
     );
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
   }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
-      {children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 }
@@ -46,3 +45,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   return useContext(AuthContext);
 }
+
