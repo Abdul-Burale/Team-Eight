@@ -1,4 +1,4 @@
-import { Bell, Home, Info, LogIn, Phone, Search, TrendingUp } from 'lucide-react';
+import { Bell, Heart, Home, HouseHeart, Info, LogIn, Phone, Search, TrendingUp } from 'lucide-react';
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabase/client";
 import { useAuth } from '../context/AuthContext'
@@ -20,13 +20,13 @@ export function Header() {
         {to: '/alerts', id: 'alerts', label: 'Alerts', icon: Bell, protected: true},
         {to: '/market', id: 'market', label: 'Market Intelligence', icon: TrendingUp},
         {to: '/contact', id: 'contact', label: 'Contact', icon: Phone},
-        {to: '/about', id: 'about', label: 'About', icon: Info}
+        {to: '/add', id: 'add', label: 'Add a Listing', icon: Heart, protected: true}
     ];
 
     async function handleSignOut() {
         await supabase.auth.signOut();
-        navigate('/')
-    }
+        window.location.href = "/"; // hard refresh
+      }
 
 
     return (
@@ -37,7 +37,7 @@ export function Header() {
                         <img src={logo} alt="Logo" className="h-12 w-auto" />
                         </div>
 
-                        <nav className="hidden md:flex items-center gap-2">
+                        <nav className="pl-40 hidden md:flex items-center gap-2">
                             {navItems.filter(item => !item.protected || (item.protected && user))
                             .map((item) => (
                                 <NavButton
@@ -54,7 +54,9 @@ export function Header() {
                 
                 
                 {/* Auth Buttons -> Conditional Rendering */}
+                
                 <div className="flex flex-row mt-1">
+                
                 {!user ? (
                 <>
                 <NavButton id="/signin" label="Sign In" icon={LogIn} onClick={() => navigate("/signin")} />

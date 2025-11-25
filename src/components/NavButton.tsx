@@ -6,6 +6,7 @@ interface NavButtonProps {
     icon?: React.ElementType;
     active?: boolean;
     onClick?: (id: string) => void;
+    color?: string;
 }
 
 export const NavButton : React.FC<NavButtonProps> = ({
@@ -15,6 +16,7 @@ export const NavButton : React.FC<NavButtonProps> = ({
     active,
     onClick,
 }) => {
+    
     return (
         <button onClick={() => onClick?.(id)}
         className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors

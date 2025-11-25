@@ -62,7 +62,7 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4 py-12">
-      <div className="bg-white text-gray-900 flex flex-col gap-6 rounded-xl border w-full max-w-2xl shadow-sm">
+      <div className="bg-white text-gray-900 flex flex-col gap-6 rounded-xl border w-full max-w-md shadow-sm">
 
         {/* Header */}
         <div className="px-6 pt-6 text-center border-b pb-6">
