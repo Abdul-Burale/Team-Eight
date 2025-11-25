@@ -32,13 +32,17 @@ export default function ListingSuccess() {
         console.log("Calling verify-checkout-session with session ID:", sessionId);
 
         const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-checkout-session`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ sessionId }),
-          }
-        );
+            `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-checkout-session`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              },
+              body: JSON.stringify({ sessionId }),
+            }
+          );
+          
 
         console.log("Edge function response status:", res.status);
 
