@@ -1,6 +1,6 @@
 import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
-import { ChevronDown, MapPin, DollarSign, SlidersHorizontal, PoundSterlingIcon } from "lucide-react";
+import { ChevronDown, MapPin, PoundSterlingIcon } from "lucide-react";
 
 export default function FiltersSidebar() {
   return (

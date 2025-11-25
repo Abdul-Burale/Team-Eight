@@ -1,4 +1,4 @@
-import { Bell, Heart, Home, HouseHeart, Info, LogIn, Phone, Search, TrendingUp } from 'lucide-react';
+import { Bell, Heart, Home, LogIn, Phone, Search, TrendingUp } from 'lucide-react';
 import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "../supabase/client";
 import { useAuth } from '../context/AuthContext'
