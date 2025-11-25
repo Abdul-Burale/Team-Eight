@@ -9,14 +9,11 @@ export default function AddListing() {
   const { user, loading } = useAuth();
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate("/signup");
-    }
+    if (!loading && !user) navigate("/signup");
   }, [loading, user, navigate]);
 
   if (loading || !user) return null;
 
-  // -------- FORM STATE --------
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState<number | "">("");
@@ -30,47 +27,29 @@ export default function AddListing() {
   const [noiseLevel, setNoiseLevel] = useState("");
   const [latitude, setLatitude] = useState<number | "">("");
   const [longitude, setLongitude] = useState<number | "">("");
-
-  // Images
   const [images, setImages] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
-  // ------------------------
-  // Handle image selection
-  // ------------------------
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    const selected = Array.from(e.target.files).slice(0, 20); // max 20
+    const selected = Array.from(e.target.files).slice(0, 20);
     setImages(selected);
   };
 
-  // ------------------------
-  // Upload images to Supabase Storage
-  // ------------------------
   const uploadImagesToSupabase = async (): Promise<string[]> => {
     const uploadedUrls: string[] = [];
-
     for (const image of images) {
-      const fileExt = image.name.split(".").pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 8)}.${fileExt}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from("property-images")
-        .upload(fileName, image);
-
-      if (uploadError) throw uploadError;
-
+      const ext = image.name.split(".").pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substr(2, 8)}.${ext}`;
+      const { error } = await supabase.storage.from("property-images").upload(fileName, image);
+      if (error) throw error;
       const { data } = supabase.storage.from("property-images").getPublicUrl(fileName);
       if (data?.publicUrl) uploadedUrls.push(data.publicUrl);
     }
-
     return uploadedUrls;
   };
 
-  // ------------------------
-  // Submit form
-  // ------------------------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
@@ -82,51 +61,53 @@ export default function AddListing() {
 
     try {
       setUploading(true);
-
       const imageUrls = await uploadImagesToSupabase();
 
-      const { error } = await supabase.from("properties").insert([
-        {
-          title,
-          description,
-          price,
-          location,
-          city,
-          postcode,
-          bedrooms,
-          property_type: propertyType,
-          near_park: nearPark,
-          near_school: nearSchool,
-          noise_level: noiseLevel,
-          image_urls: imageUrls, // <-- store as array
-          latitude: latitude === "" ? null : latitude,
-          longitude: longitude === "" ? null : longitude,
-          owner_id: user.id,
+      const listingData = {
+        title,
+        description,
+        price,
+        location,
+        city,
+        postcode,
+        bedrooms,
+        property_type: propertyType,
+        near_park: nearPark,
+        near_school: nearSchool,
+        noise_level: noiseLevel,
+        latitude: latitude === "" ? null : latitude,
+        longitude: longitude === "" ? null : longitude,
+        image_urls: imageUrls,
+      };
+
+      // Call Supabase Edge Function to create Stripe Checkout session
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-      ]);
+        body: JSON.stringify({
+          userId: user.id,
+          listing: listingData,
+        }),
+      });
 
-      setUploading(false);
+      const data = await res.json();
+      if (!data.url) throw new Error("Failed to create Stripe session");
 
-      if (error) {
-        setErrorMsg(error.message);
-        return;
-      }
-
-      navigate("/search");
+      // Redirect to Stripe Checkout
+      window.location.href = data.url;
     } catch (err: any) {
-      setUploading(false);
       setErrorMsg(err.message);
+      setUploading(false);
     }
   };
 
-  // ============================================================
-  // RENDER FORM
-  // ============================================================
   return (
     <div className="min-h-screen w-full bg-gradient-to-b from-blue-50 to-white py-12 px-4">
       <div className="max-w-4xl mx-auto bg-white shadow-md rounded-3xl p-10">
         <h1 className="text-3xl font-bold mb-10 text-center">Post a Property</h1>
-
         {errorMsg && <p className="text-red-600 mb-6 text-center">{errorMsg}</p>}
 
         <form className="space-y-16" onSubmit={handleSubmit}>
@@ -134,26 +115,9 @@ export default function AddListing() {
           <section className="pb-10 border-b border-gray-200">
             <h2 className="text-xl font-semibold mb-4">Basic Information</h2>
             <div className="space-y-4">
-              <input
-                type="text"
-                placeholder="Title *"
-                className="w-full border rounded-md px-4 py-2"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-              <textarea
-                placeholder="Description *"
-                className="w-full border rounded-md px-4 py-2 h-32"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-              <input
-                type="number"
-                placeholder="Price (£) *"
-                className="w-full border rounded-md px-4 py-2"
-                value={price}
-                onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))}
-              />
+              <input type="text" placeholder="Title *" className="w-full border rounded-md px-4 py-2" value={title} onChange={(e) => setTitle(e.target.value)} />
+              <textarea placeholder="Description *" className="w-full border rounded-md px-4 py-2 h-32" value={description} onChange={(e) => setDescription(e.target.value)} />
+              <input type="number" placeholder="Price (£) *" className="w-full border rounded-md px-4 py-2" value={price} onChange={(e) => setPrice(e.target.value === "" ? "" : Number(e.target.value))} />
             </div>
           </section>
 
@@ -187,7 +151,6 @@ export default function AddListing() {
                 <option value="High">High</option>
               </select>
             </div>
-
             <div className="flex gap-6 mt-4">
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={nearPark} onChange={(e) => setNearPark(e.target.checked)} /> Near Park
@@ -224,10 +187,17 @@ export default function AddListing() {
             </div>
           </section>
 
-          {/* SUBMIT */}
+          {/* DISCLAIMER */}
+          <section className="mb-4 text-center">
+            <p className="text-sm text-gray-600">
+              By submitting, you agree to pay a listing fee of <strong>£9.99</strong> to add your property to our platform.
+            </p>
+          </section>
+
+          {/* SUBMIT BUTTON */}
           <div className="pt-4">
             <Button type="submit" disabled={uploading} className="w-full py-3 text-lg">
-              {uploading ? "Uploading..." : "Post Property"}
+              {uploading ? "Verifying..." : "Proceed to Check Out Session"}
             </Button>
           </div>
         </form>
@@ -235,3 +205,4 @@ export default function AddListing() {
     </div>
   );
 }
+

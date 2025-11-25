@@ -7,6 +7,7 @@ import SignUp from "./pages/SignUp";
 import Search from "./pages/Search";
 import AddListing from "./pages/AddListing";
 import PropertyDetailsPage from "./pages/PropertyDetails";
+import ListingSuccess from "./pages/ListingSuccess";
 
 function App() {
   const location = useLocation();
@@ -29,6 +30,8 @@ function App() {
           <Route path="/search" element={<Search />} />
           <Route path="/add" element={<AddListing />} />
           <Route path="/property/:id" element={<PropertyDetailsPage />} />
+          <Route path="/listing-success" element={<ListingSuccess />} />
+          
           
         </Routes>
       </main>
