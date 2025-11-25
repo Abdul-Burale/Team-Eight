@@ -11,19 +11,26 @@ export default function ListingSuccess() {
   const sessionId = query.get("session_id");
 
   useEffect(() => {
+    console.log("ListingSuccess mounted");
+    console.log("User loading:", loading, "User:", user);
+    console.log("Session ID from query:", sessionId);
+
     if (!loading && !user) {
+      console.log("No user, redirecting to signup");
       navigate("/signup");
       return;
     }
 
     if (!sessionId) {
+      console.log("No session ID found in URL");
       setStatus("❌ No session ID found.");
       return;
     }
 
     async function completeListing() {
       try {
-        // Send session_id to your edge function
+        console.log("Calling verify-checkout-session with session ID:", sessionId);
+
         const res = await fetch(
           `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/verify-checkout-session`,
           {
@@ -33,15 +40,20 @@ export default function ListingSuccess() {
           }
         );
 
+        console.log("Edge function response status:", res.status);
+
         const data = await res.json();
+        console.log("Edge function response data:", data);
 
         if (data.success) {
+          console.log("Payment verified successfully");
           setStatus("✅ Listing posted successfully!");
         } else {
+          console.log("Payment verification failed");
           setStatus("❌ Payment verification failed.");
         }
       } catch (err: any) {
-        console.error(err);
+        console.error("Error calling edge function:", err);
         setStatus("⚠️ Error verifying payment.");
       }
     }
