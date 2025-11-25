@@ -25,7 +25,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
       <div className="p-4">
         <h3 className="text-lg font-bold">{property.title}</h3>
         <p className="text-gray-600">{property.location}</p>
-        <p className="text-blue-600 font-semibold">£{property.price.toLocaleString()}</p>
+        <p className="text-blue-600 font-semibold"> £{property.price != null ? property.price.toLocaleString() : "N/A"} </p>
       </div>
     </Card>
   );
