@@ -3,42 +3,104 @@ import logo from "../assets/logo.png";
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-async function handleSignUp(email: string, password: string, name: string, userType: string) {
-    const {data, error} = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-            data: {
-                full_name: name,
-                user_type: userType
-            }
+async function handleSignUp(email: string, password: string, firstName: string, lastName: string, role: string) {
+    try {
+        // Step 1: Create Supabase Auth user (ONLY email and password)
+        const { data, error } = await supabase.auth.signUp({
+            email,
+            password,
+        });
+        
+        console.log("AUTH SIGNUP RESULT:", { data, error });
+        
+        if (error) {
+            return { success: false, error: error.message };
         }
-    });
-    
-    
-    
-  if (error) {
-    return { success: false, error: error.message}
-  } 
 
-  return { success: true, user: data.user}
+        // Step 2: Get user ID from data.user OR data.session.user
+        const user = data.user ?? data.session?.user;
+        const userId = user?.id;
+
+        if (!userId) {
+            return { 
+                success: false, 
+                error: "Failed to create user account. User ID not found." 
+            };
+        }
+
+        // Step 3: UPDATE the user row created by the database trigger
+        // DO NOT INSERT - the trigger already created the row
+        const { error: updateError } = await supabase
+            .from('users')
+            .update({
+                first_name: firstName,
+                last_name: lastName,
+                role: role,
+            })
+            .eq('id', userId);
+
+        console.log("UPDATED USER:", {
+            id: userId,
+            first_name: firstName,
+            last_name: lastName,
+            role: role
+        });
+
+        if (updateError) {
+            console.error("UPDATE ERROR:", updateError);
+            return { 
+                success: false, 
+                error: updateError.message || "Database error saving new user" 
+            };
+        }
+
+        return { success: true, user: user };
+    } catch (err: any) {
+        console.error('Signup error:', err);
+        return { 
+            success: false, 
+            error: err.message || "An unexpected error occurred during signup" 
+        };
+    }
 }
 
 
 export default function SignUp() {
-    const [name, setName] = useState("");
+    const [firstName, setFirstName] = useState("");
+    const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [userType, setUserType] = useState("");
+    const [role, setRole] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
     const [termsAccepted, setTermsAccepted] = useState(false);
 
     const submitForm = async (e: React.FormEvent)=> {
         e.preventDefault();
 
+        // Validation
+        if (!firstName.trim()) {
+            setErrorMsg("First name is required");
+            return;
+        }
+
+        if (!lastName.trim()) {
+            setErrorMsg("Last name is required");
+            return;
+        }
+
         if (password !== confirmPassword) {
             setErrorMsg("Passwords do not match");
+            return;
+        }
+
+        if (password.length < 8) {
+            setErrorMsg("Password must be at least 8 characters");
+            return;
+        }
+
+        if (!role) {
+            setErrorMsg("Please select a role");
             return;
         }
 
@@ -47,7 +109,7 @@ export default function SignUp() {
             return;
         }
 
-        const result = await handleSignUp(email, password, name, userType);
+        const result = await handleSignUp(email, password, firstName, lastName, role);
 
         if (result.success) {
             navigate('/')
@@ -80,17 +142,33 @@ export default function SignUp() {
 
             {errorMsg && (<div className="text-red-600 text-sm">{errorMsg}</div>)}
 
-            {/* Name */}
-            <div className="space-y-2">
-              <label htmlFor="name" className="text-sm font-medium">Full Name</label>
-              <input
-                id="name"
-                type="text"
-                value={name}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
-                placeholder="John Smith"
-                className="w-full rounded-md border px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
-              />
+            {/* First Name and Last Name */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="firstName" className="text-sm font-medium">First Name</label>
+                <input
+                  id="firstName"
+                  type="text"
+                  value={firstName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
+                  placeholder="John"
+                  required
+                  className="w-full rounded-md border px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label htmlFor="lastName" className="text-sm font-medium">Last Name</label>
+                <input
+                  id="lastName"
+                  type="text"
+                  value={lastName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
+                  placeholder="Smith"
+                  required
+                  className="w-full rounded-md border px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                />
+              </div>
             </div>
 
             {/* Email */}
@@ -133,22 +211,22 @@ export default function SignUp() {
               </div>
             </div>
 
-            {/* User Type */}
+            {/* Role */}
             <div className="space-y-2">
-              <label htmlFor="userType" className="text-sm font-medium">I am a...</label>
+              <label htmlFor="role" className="text-sm font-medium">I am a...</label>
 
               <select
-                id="userType"
-                value={userType}
+                id="role"
+                value={role}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setUserType(e.target.value)
+                    setRole(e.target.value)
                   }
+                required
                 className="w-full rounded-md border px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
               >
                 <option value="">Select user type</option>
-                <option value="tenant">Tenant - Looking to Rent</option>
-                <option value="landlord">Landlord - Listing Properties</option>
-                <option value="buyer">Buyer - Looking to Purchase</option>
+                <option value="buyer">Buyer</option>
+                <option value="seller">Seller</option>
               </select>
             </div>
 
