@@ -81,7 +81,7 @@ export default function SellerSidebar() {
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
-        <div className="flex flex-col h-full">
+        <div className="h-full flex flex-col">
           {/* Logo Section */}
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center gap-3">
@@ -96,7 +96,7 @@ export default function SellerSidebar() {
           </div>
 
           {/* Navigation Items */}
-          <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
+          <nav className="px-4 py-6 flex flex-col gap-3">
             {navItems.map((item) => {
               const Icon = item.icon;
               const active = isActive(item.pathTemplate);
@@ -130,8 +130,8 @@ export default function SellerSidebar() {
             })}
           </nav>
 
-          {/* Logout Button */}
-          <div className="p-4 border-t border-gray-200">
+          {/* Logout Button - Directly below menu items */}
+          <div className="px-4 py-4 border-t border-gray-200">
             <button
               onClick={handleLogout}
               className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-all duration-200"

@@ -149,6 +149,18 @@ export default function AddProperty() {
     setLoading(true);
 
     try {
+      // Get authenticated user's ID
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !userData?.user) {
+        console.error('Auth error:', userError);
+        setErrors({ submit: 'You must be logged in to create a property listing.' });
+        setLoading(false);
+        return;
+      }
+
+      const user = userData.user;
+
       // Upload image first
       const imageUrl = await uploadImageToSupabase();
 
@@ -156,10 +168,11 @@ export default function AddProperty() {
         throw new Error('Failed to upload image');
       }
 
-      // Insert property into Supabase
+      // Insert property into Supabase with user_id
       const { data, error } = await supabase
         .from('properties')
         .insert({
+          user_id: user.id,
           title: title.trim(),
           description: description.trim(),
           price: Number(price),
@@ -181,8 +194,16 @@ export default function AddProperty() {
         .select();
 
       if (error) {
-        console.error('Insert error:', error);
-        throw error;
+        console.error('RLS ERROR:', error.message);
+        
+        // Check if it's an RLS error
+        if (error.message.includes('Row Level Security') || error.message.includes('policy') || error.code === '42501') {
+          setErrors({ submit: 'You are not allowed to insert or view this data. Please check your permissions.' });
+        } else {
+          setErrors({ submit: error.message || 'Failed to create property listing. Please try again.' });
+        }
+        setLoading(false);
+        return;
       }
 
       // Success - redirect to properties page

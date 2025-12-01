@@ -75,21 +75,36 @@ export default function MyProperties() {
         setLoading(true);
         setError(null);
 
-        // Fetch properties for the current user
-        // Note: If your properties table has a seller_id or user_id field, uncomment the filter below
-        // For now, fetching all properties. In production, filter by: .eq('seller_id', user.id)
-        let query = supabase
+        // Get authenticated user's ID
+        const { data: userData, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !userData?.user) {
+          console.error('Auth error:', userError);
+          setError('You must be logged in to view your properties.');
+          setLoading(false);
+          return;
+        }
+
+        const currentUser = userData.user;
+
+        // Fetch only properties where user_id matches the authenticated user
+        const { data, error: fetchError } = await supabase
           .from('properties')
           .select('*')
+          .eq('user_id', currentUser.id)
           .order('created_at', { ascending: false });
 
-        // Uncomment this line if your properties table has a seller_id field:
-        // query = query.eq('seller_id', user.id);
-        
-        const { data, error: fetchError } = await query;
-
         if (fetchError) {
-          throw fetchError;
+          console.error('RLS ERROR:', fetchError.message);
+          
+          // Check if it's an RLS error
+          if (fetchError.message.includes('Row Level Security') || fetchError.message.includes('policy') || fetchError.code === '42501') {
+            setError('You are not allowed to insert or view this data. Please check your permissions.');
+          } else {
+            setError(fetchError.message || 'Failed to load properties');
+          }
+          setLoading(false);
+          return;
         }
 
         // Transform data to include status, views, offers
