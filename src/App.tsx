@@ -14,6 +14,7 @@ import MyProperties from "./pages/seller/MyProperties";
 import OffersReceived from "./pages/seller/OffersReceived";
 import ProfileSettings from "./pages/seller/ProfileSettings";
 import BuyerDashboard from "./pages/buyer/BuyerDashboard";
+import SearchProperties from "./pages/buyer/SearchProperties";
 import AgentDashboard from "./pages/agent/AgentDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 
@@ -106,6 +107,14 @@ function App() {
             element={
               <ProtectedRoute requiredRole="buyer">
                 <BuyerDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/buyer/:userId/search"
+            element={
+              <ProtectedRoute requiredRole="buyer">
+                <SearchProperties />
               </ProtectedRoute>
             }
           />

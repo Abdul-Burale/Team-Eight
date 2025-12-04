@@ -13,7 +13,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: 'dashboard', label: 'Home Dashboard', icon: Home, pathTemplate: '/buyer/dashboard/:userId' },
-  { id: 'search', label: 'Search Properties', icon: Search, pathTemplate: '/search' },
+  { id: 'search', label: 'Search Properties', icon: Search, pathTemplate: '/buyer/:userId/search' },
   { id: 'saved', label: 'Saved Homes', icon: Heart, pathTemplate: '/buyer/:userId/saved' },
   { id: 'offers', label: 'My Offers', icon: FileText, pathTemplate: '/buyer/:userId/offers' },
   { id: 'alerts', label: 'Alerts', icon: Bell, pathTemplate: '/buyer/:userId/alerts' },

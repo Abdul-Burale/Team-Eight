@@ -1,0 +1,134 @@
+import { Heart, Bed, Bath, Square, MapPin } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { supabase } from '../../supabase/client';
+import type { Property } from '../../types';
+
+interface BuyerPropertyCardProps {
+  property: Property & {
+    bathrooms?: number;
+    size?: number;
+    updated_at?: string;
+  };
+  showBadge?: boolean;
+  badgeText?: string;
+}
+
+export default function BuyerPropertyCard({ property, showBadge, badgeText }: BuyerPropertyCardProps) {
+  const navigate = useNavigate();
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency: 'GBP',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(price);
+  };
+
+  const handleViewProperty = () => {
+    navigate(`/property/${property.id}`);
+  };
+
+  const handleSave = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isSaving || isSaved) return;
+
+    setIsSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate('/signin');
+        return;
+      }
+
+      const { error } = await supabase
+        .from('saved_properties')
+        .insert({
+          user_id: user.id,
+          property_id: property.id,
+        });
+
+      if (!error) {
+        setIsSaved(true);
+      }
+    } catch (err) {
+      console.error('Error saving property:', err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const location = `${property.location || ''}${property.city ? (property.location ? ', ' : '') + property.city : ''}`;
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
+      {/* Image Container */}
+      <div className="relative">
+        <img
+          src={property.image_url || 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=400&h=300&fit=crop'}
+          alt={property.title}
+          className="w-full h-48 object-cover"
+        />
+        {showBadge && badgeText && (
+          <div className="absolute top-3 left-3 bg-blue-600 text-white px-3 py-1 rounded-full text-xs font-medium">
+            {badgeText}
+          </div>
+        )}
+        <button
+          onClick={handleSave}
+          disabled={isSaving || isSaved}
+          className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full transition-colors"
+          aria-label="Save property"
+        >
+          <Heart className={`w-5 h-5 ${isSaved ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} />
+        </button>
+      </div>
+
+      {/* Content */}
+      <div className="p-4">
+        <h3 className="font-semibold text-gray-900 text-lg mb-1">{property.title}</h3>
+        <div className="flex items-center gap-1 text-sm text-gray-600 mb-3">
+          <MapPin className="w-4 h-4" />
+          <span>{location}</span>
+        </div>
+
+        {/* Property Details */}
+        <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
+          {property.bedrooms !== undefined && (
+            <div className="flex items-center gap-1">
+              <Bed className="w-4 h-4" />
+              <span>{property.bedrooms}</span>
+            </div>
+          )}
+          {property.bathrooms !== undefined && (
+            <div className="flex items-center gap-1">
+              <Bath className="w-4 h-4" />
+              <span>{property.bathrooms}</span>
+            </div>
+          )}
+          {property.size !== undefined && (
+            <div className="flex items-center gap-1">
+              <Square className="w-4 h-4" />
+              <span>{property.size.toLocaleString()} sq ft</span>
+            </div>
+          )}
+        </div>
+
+        {/* Price */}
+        <p className="text-xl font-bold text-gray-900 mb-4">{formatPrice(property.price)}</p>
+
+        {/* View Property Button */}
+        <button
+          onClick={handleViewProperty}
+          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+        >
+          View Property
+        </button>
+      </div>
+    </div>
+  );
+}
+
