@@ -18,6 +18,10 @@ import SearchProperties from "./pages/buyer/SearchProperties";
 import AgentDashboard from "./pages/agent/AgentDashboard";
 import AdminDashboard from "./pages/admin/AdminDashboard";
 import ContactPage from "./pages/Contact";
+import SavedProperties from "./pages/buyer/SavedProperties";
+import BuyerOffers from "./pages/buyer/BuyerOffers";
+import BuyerAlerts from "./pages/buyer/BuyerAlerts";
+import BuyerProfileSettings from "./pages/buyer/BuyerProfileSettings";
 
 function App() {
   const location = useLocation();
@@ -136,6 +140,40 @@ function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+          path="/buyer/:userId/saved"
+          element={
+          <ProtectedRoute requiredRole="buyer">
+            <SavedProperties />
+          </ProtectedRoute>
+           }
+          />
+          <Route
+            path="/buyer/:userId/offers"
+            element={
+              <ProtectedRoute requiredRole="buyer">
+                <BuyerOffers />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/buyer/:userId/alerts"
+            element={
+              <ProtectedRoute requiredRole="buyer">
+                <BuyerAlerts />
+              </ProtectedRoute>
+            }
+          />
+        <Route
+          path="/buyer/:userId/settings"
+          element={
+            <ProtectedRoute requiredRole="buyer">
+              <BuyerProfileSettings />
+            </ProtectedRoute>
+          }
+          />
+
+
         </Routes>
       </main>
       {!hideLayout && <Footer />}
