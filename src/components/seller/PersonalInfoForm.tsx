@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { User, Save, X } from 'lucide-react';
+import { User, Save } from 'lucide-react';
 
 interface Profile {
   id: string;
@@ -7,6 +7,8 @@ interface Profile {
   last_name: string;
   email: string;
   phone: string | null;
+  role: string;
+  created_at: string;
 }
 
 interface PersonalInfoFormProps {
@@ -26,8 +28,13 @@ export default function PersonalInfoForm({ profile, onSave }: PersonalInfoFormPr
     e.preventDefault();
     setError(null);
     setSuccess(false);
-    setLoading(true);
 
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('First name and last name are required');
+      return;
+    }
+
+    setLoading(true);
     try {
       await onSave({
         first_name: firstName.trim(),
@@ -35,26 +42,15 @@ export default function PersonalInfoForm({ profile, onSave }: PersonalInfoFormPr
         phone: phone.trim(),
       });
       setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
+      setTimeout(() => {
+        setSuccess(false);
+      }, 3000);
     } catch (err: any) {
       setError(err.message || 'Failed to update profile. Please try again.');
     } finally {
       setLoading(false);
     }
   };
-
-  const handleCancel = () => {
-    setFirstName(profile.first_name || '');
-    setLastName(profile.last_name || '');
-    setPhone(profile.phone || '');
-    setError(null);
-    setSuccess(false);
-  };
-
-  const hasChanges =
-    firstName.trim() !== (profile.first_name || '') ||
-    lastName.trim() !== (profile.last_name || '') ||
-    phone.trim() !== (profile.phone || '');
 
   return (
     <div className="bg-white shadow-sm rounded-2xl p-6 border border-gray-100">
@@ -89,8 +85,9 @@ export default function PersonalInfoForm({ profile, onSave }: PersonalInfoFormPr
               type="text"
               value={firstName}
               onChange={(e) => setFirstName(e.target.value)}
-              required
+              placeholder="Enter your first name"
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
             />
           </div>
 
@@ -104,8 +101,9 @@ export default function PersonalInfoForm({ profile, onSave }: PersonalInfoFormPr
               type="text"
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
-              required
+              placeholder="Enter your last name"
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
             />
           </div>
         </div>
@@ -120,47 +118,38 @@ export default function PersonalInfoForm({ profile, onSave }: PersonalInfoFormPr
             type="email"
             value={profile.email}
             disabled
-            className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-500 cursor-not-allowed"
+            className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm bg-gray-50 text-gray-500 cursor-not-allowed"
           />
           <p className="mt-1 text-xs text-gray-500">Email cannot be changed</p>
         </div>
 
-        {/* Phone Number */}
+        {/* Phone */}
         <div>
           <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-2">
-            Phone Number <span className="text-red-500">*</span>
+            Phone Number
           </label>
           <input
             id="phone"
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            required
+            placeholder="Enter your phone number"
             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
           />
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-4 pt-4">
+        {/* Save Button */}
+        <div className="pt-4">
           <button
             type="submit"
-            disabled={loading || !hasChanges}
+            disabled={loading || !firstName.trim() || !lastName.trim()}
             className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Save className="w-4 h-4" />
             Save Changes
-          </button>
-          <button
-            type="button"
-            onClick={handleCancel}
-            disabled={loading || !hasChanges}
-            className="px-6 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Cancel
           </button>
         </div>
       </form>
     </div>
   );
 }
-

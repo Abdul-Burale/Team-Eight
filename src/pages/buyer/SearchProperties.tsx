@@ -12,11 +12,10 @@ interface ExtendedProperty extends Property {
   bathrooms?: number;
   size?: number;
   updated_at?: string;
+  status?: string;
 }
 
 export default function SearchProperties() {
-  const { userId } = useParams<{ userId: string }>();
-  
   // State management
   const [properties, setProperties] = useState<ExtendedProperty[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,90 +31,108 @@ export default function SearchProperties() {
   const [sortBy, setSortBy] = useState('recommended');
   const [page, setPage] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [appliedFilters, setAppliedFilters] = useState(false);
 
   const propertiesPerPage = 9;
 
-  // Build and execute Supabase query
+  // Build query with all filters applied
+  const buildQuery = (baseQuery: any) => {
+    let query = baseQuery;
+
+    // Location filter (city or postcode) - using ilike for partial match
+    if (location) {
+      query = query.or(`city.ilike.%${location}%,postcode.ilike.%${location}%`);
+    }
+
+    // Price filters
+    if (minPrice) {
+      query = query.gte('price', Number(minPrice));
+    }
+    if (maxPrice) {
+      query = query.lte('price', Number(maxPrice));
+    }
+
+    // Bedrooms filter
+    if (bedrooms) {
+      if (bedrooms === 'Studio') {
+        query = query.eq('bedrooms', 0);
+      } else if (bedrooms === '5+') {
+        query = query.gte('bedrooms', 5);
+      } else {
+        query = query.eq('bedrooms', Number(bedrooms));
+      }
+    }
+
+    // Property type filter
+    if (propertyType) {
+      query = query.eq('property_type', propertyType);
+    }
+
+    // Toggle filters
+    if (nearPark) {
+      query = query.eq('near_park', true);
+    }
+    if (nearSchool) {
+      query = query.eq('near_school', true);
+    }
+    if (quietArea) {
+      // Quiet area means noise_level equals 'low' (case-insensitive)
+      query = query.ilike('noise_level', '%low%');
+    }
+
+    return query;
+  };
+
+  // Fetch properties with filters
   const fetchProperties = async () => {
     setLoading(true);
     try {
-      // Start with base query - only active properties
-      let query = supabase
-        .from('properties')
-        .select('*', { count: 'exact' })
-        .eq('status', 'active');
+      // Build count query with all filters
+      let countQuery = buildQuery(
+        supabase.from('properties').select('*', { count: 'exact', head: true }).eq('status', 'active')
+      );
+      const { count, error: countError } = await countQuery;
 
-      // Location filter (city or postcode)
-      if (location) {
-        query = query.or(`city.ilike.%${location}%,postcode.ilike.%${location}%,location.ilike.%${location}%`);
-      }
-
-      // Price filters
-      if (minPrice) {
-        query = query.gte('price', Number(minPrice));
-      }
-      if (maxPrice) {
-        query = query.lte('price', Number(maxPrice));
+      if (countError) {
+        console.error('Error counting properties:', countError);
       }
 
-      // Bedrooms filter
-      if (bedrooms) {
-        if (bedrooms === 'Studio') {
-          query = query.eq('bedrooms', 0);
-        } else if (bedrooms === '5+') {
-          query = query.gte('bedrooms', 5);
-        } else {
-          query = query.eq('bedrooms', Number(bedrooms));
-        }
-      }
-
-      // Property type filter
-      if (propertyType) {
-        query = query.eq('property_type', propertyType);
-      }
-
-      // Toggle filters
-      if (nearPark) {
-        query = query.eq('near_park', true);
-      }
-      if (nearSchool) {
-        query = query.eq('near_school', true);
-      }
-      if (quietArea) {
-        // Handle case-insensitive matching for noise_level
-        query = query.ilike('noise_level', '%low%');
-      }
+      // Build data query with filters and sorting
+      let dataQuery = buildQuery(
+        supabase.from('properties').select('*').eq('status', 'active')
+      );
 
       // Sorting
       switch (sortBy) {
         case 'price_low':
-          query = query.order('price', { ascending: true });
+          dataQuery = dataQuery.order('price', { ascending: true });
           break;
         case 'price_high':
-          query = query.order('price', { ascending: false });
+          dataQuery = dataQuery.order('price', { ascending: false });
           break;
         case 'bedrooms':
-          query = query.order('bedrooms', { ascending: false });
+          dataQuery = dataQuery.order('bedrooms', { ascending: false });
           break;
         case 'newest':
-          query = query.order('created_at', { ascending: false });
+          dataQuery = dataQuery.order('created_at', { ascending: false });
           break;
         case 'recommended':
         default:
-          query = query.order('created_at', { ascending: false });
+          dataQuery = dataQuery.order('created_at', { ascending: false });
           break;
       }
 
       // Pagination
       const from = (page - 1) * propertiesPerPage;
       const to = from + propertiesPerPage - 1;
-      query = query.range(from, to);
+      dataQuery = dataQuery.range(from, to);
 
-      const { data, error, count } = await query;
+      const { data, error } = await dataQuery;
 
       if (error) {
         console.error('Error fetching properties:', error);
         setProperties([]);
+        setTotalCount(0);
       } else {
         setProperties(data || []);
         setTotalCount(count || 0);
@@ -123,28 +140,67 @@ export default function SearchProperties() {
     } catch (err) {
       console.error('Error fetching properties:', err);
       setProperties([]);
+      setTotalCount(0);
     } finally {
       setLoading(false);
     }
   };
 
-  // Fetch properties when filters, sort, or page changes
+  // Fetch properties when filters are applied or pagination/sorting changes
   useEffect(() => {
-    fetchProperties();
+    if (appliedFilters) {
+      fetchProperties();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, sortBy, location, minPrice, maxPrice, bedrooms, propertyType, nearPark, nearSchool, quietArea]);
+  }, [page, sortBy, appliedFilters]);
 
-  // Handle search
+  // Initial load - fetch all properties
+  useEffect(() => {
+    const loadInitialProperties = async () => {
+      setLoading(true);
+      try {
+        let query = supabase
+          .from('properties')
+          .select('*', { count: 'exact' })
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .range(0, propertiesPerPage - 1);
+
+        const { data, error, count } = await query;
+
+        if (error) {
+          console.error('Error fetching properties:', error);
+          setProperties([]);
+          setTotalCount(0);
+        } else {
+          setProperties(data || []);
+          setTotalCount(count || 0);
+        }
+      } catch (err) {
+        console.error('Error fetching properties:', err);
+        setProperties([]);
+        setTotalCount(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadInitialProperties();
+  }, []);
+
+  // Handle search from banner
   const handleSearch = () => {
     if (searchQuery.trim()) {
       setLocation(searchQuery.trim());
       setPage(1);
+      setAppliedFilters(true);
     }
   };
 
   // Apply filters
   const handleApplyFilters = () => {
     setPage(1);
+    setAppliedFilters(true);
     fetchProperties();
   };
 
@@ -161,6 +217,37 @@ export default function SearchProperties() {
     setQuietArea(false);
     setSortBy('recommended');
     setPage(1);
+    setAppliedFilters(false);
+    
+    // Reset to show all properties
+    const resetQuery = async () => {
+      setLoading(true);
+      try {
+        const { data, error, count } = await supabase
+          .from('properties')
+          .select('*', { count: 'exact' })
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
+          .range(0, propertiesPerPage - 1);
+
+        if (error) {
+          console.error('Error fetching properties:', error);
+          setProperties([]);
+          setTotalCount(0);
+        } else {
+          setProperties(data || []);
+          setTotalCount(count || 0);
+        }
+      } catch (err) {
+        console.error('Error fetching properties:', err);
+        setProperties([]);
+        setTotalCount(0);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    resetQuery();
   };
 
   // Get property badge
@@ -186,7 +273,7 @@ export default function SearchProperties() {
 
   // Calculate pagination
   const totalPages = Math.ceil(totalCount / propertiesPerPage);
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  const pages = Array.from({ length: Math.min(totalPages, 10) }, (_, i) => i + 1); // Limit to 10 pages max
 
   return (
     <div className="min-h-screen bg-white">
@@ -240,7 +327,7 @@ export default function SearchProperties() {
 
                   <button
                     onClick={handleSearch}
-                    className="bg-white text-blue-600 font-medium rounded-xl px-6 py-3 hover:bg-blue-50 transition whitespace-nowrap flex-shrink-0"
+                    className="bg-blue-700 text-white font-semibold rounded-xl px-8 py-3 hover:bg-blue-800 transition whitespace-nowrap flex-shrink-0"
                   >
                     Search
                   </button>

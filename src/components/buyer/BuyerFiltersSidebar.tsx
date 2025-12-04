@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { MapPin, TreePine, GraduationCap, Volume2, Funnel } from 'lucide-react';
+import { MapPin, TreePine, GraduationCap, Volume2, Funnel, ChevronDown } from 'lucide-react';
 
 interface BuyerFiltersSidebarProps {
   location: string;
@@ -47,14 +46,14 @@ export default function BuyerFiltersSidebar({
   onClearFilters,
 }: BuyerFiltersSidebarProps) {
   const bedroomOptions = ['Studio', '1', '2', '3', '4', '5+'];
-  const propertyTypes = ['House', 'Apartment', 'Studio', 'Townhouse', 'Bungalow'];
+  const propertyTypes = ['House', 'Flat', 'Apartment', 'Studio', 'Penthouse', 'Bungalow', 'Cottage'];
 
   return (
-    <aside className="w-72 shrink-0">
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-6">
+    <aside className="hidden lg:block w-72 shrink-0">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 space-y-6 sticky top-6">
         {/* Header */}
-        <div className="flex items-center gap-2 mb-6">
-          <Funnel className="h-5 w-5 text-gray-600" />
+        <div className="flex items-center gap-2">
+          <Funnel className="w-5 h-5 text-gray-700" />
           <h3 className="font-semibold text-lg text-gray-900">Filters</h3>
         </div>
 
@@ -65,13 +64,13 @@ export default function BuyerFiltersSidebar({
               Location
             </label>
             <div className="relative">
-              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <MapPin className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <input
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
                 placeholder="Postcode / City / Area"
-                className="w-full pl-10 pr-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full pl-10 pr-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
@@ -87,14 +86,14 @@ export default function BuyerFiltersSidebar({
                 value={minPrice}
                 onChange={(e) => setMinPrice(e.target.value)}
                 placeholder="Min price"
-                className="w-full px-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
               <input
                 type="number"
                 value={maxPrice}
                 onChange={(e) => setMaxPrice(e.target.value)}
                 placeholder="Max price"
-                className="w-full px-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
           </div>
@@ -126,18 +125,21 @@ export default function BuyerFiltersSidebar({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Property Type
             </label>
-            <select
-              value={propertyType}
-              onChange={(e) => setPropertyType(e.target.value)}
-              className="w-full px-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            >
-              <option value="">Select type</option>
-              {propertyTypes.map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
+            <div className="relative">
+              <select
+                value={propertyType}
+                onChange={(e) => setPropertyType(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+              >
+                <option value="">Select type</option>
+                {propertyTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
           </div>
 
           {/* Nearby Preferences */}
@@ -146,36 +148,68 @@ export default function BuyerFiltersSidebar({
               Nearby Preferences
             </label>
             <div className="space-y-3">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={nearPark}
-                  onChange={(e) => setNearPark(e.target.checked)}
-                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <TreePine className="h-5 w-5 text-gray-600" />
-                <span className="text-sm text-gray-700">Near Park</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={nearSchool}
-                  onChange={(e) => setNearSchool(e.target.checked)}
-                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <GraduationCap className="h-5 w-5 text-gray-600" />
-                <span className="text-sm text-gray-700">Near School</span>
-              </label>
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={quietArea}
-                  onChange={(e) => setQuietArea(e.target.checked)}
-                  className="w-5 h-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <Volume2 className="h-5 w-5 text-gray-600" />
-                <span className="text-sm text-gray-700">Quiet Area</span>
-              </label>
+              {/* Near Park */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <TreePine className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm text-gray-700">Near Park</span>
+                </div>
+                <button
+                  onClick={() => setNearPark(!nearPark)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    nearPark ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                  aria-label="Toggle Near Park"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      nearPark ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Near School */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <GraduationCap className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm text-gray-700">Near School</span>
+                </div>
+                <button
+                  onClick={() => setNearSchool(!nearSchool)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    nearSchool ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                  aria-label="Toggle Near School"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      nearSchool ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Quiet Area */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Volume2 className="w-4 h-4 text-gray-600" />
+                  <span className="text-sm text-gray-700">Quiet Area</span>
+                </div>
+                <button
+                  onClick={() => setQuietArea(!quietArea)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    quietArea ? 'bg-blue-600' : 'bg-gray-300'
+                  }`}
+                  aria-label="Toggle Quiet Area"
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      quietArea ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -184,30 +218,33 @@ export default function BuyerFiltersSidebar({
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Sort By
             </label>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="w-full px-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-            >
-              <option value="recommended">Recommended</option>
-              <option value="price_low">Price (Low → High)</option>
-              <option value="price_high">Price (High → Low)</option>
-              <option value="bedrooms">Bedrooms</option>
-              <option value="newest">Newest</option>
-            </select>
+            <div className="relative">
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+              >
+                <option value="recommended">Recommended</option>
+                <option value="price_low">Price (Low→High)</option>
+                <option value="price_high">Price (High→Low)</option>
+                <option value="bedrooms">Bedrooms</option>
+                <option value="newest">Newest</option>
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="space-y-3 pt-4 border-t border-gray-200">
+          <div className="space-y-3 pt-2">
             <button
               onClick={onApplyFilters}
-              className="w-full bg-blue-600 text-white py-3 px-4 rounded-xl font-medium hover:bg-blue-700 transition-colors"
+              className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
             >
               Apply Filters
             </button>
             <button
               onClick={onClearFilters}
-              className="w-full bg-white text-blue-600 border-2 border-blue-600 py-3 px-4 rounded-xl font-medium hover:bg-blue-50 transition-colors"
+              className="w-full bg-white border-2 border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 transition-colors"
             >
               Clear All Filters
             </button>

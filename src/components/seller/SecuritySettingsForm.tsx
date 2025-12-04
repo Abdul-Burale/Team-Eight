@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Lock, Save, X } from 'lucide-react';
+import { Lock } from 'lucide-react';
 import { supabase } from '../../supabase/client';
 
 export default function SecuritySettingsForm() {
@@ -175,4 +175,3 @@ export default function SecuritySettingsForm() {
     </div>
   );
 }
-

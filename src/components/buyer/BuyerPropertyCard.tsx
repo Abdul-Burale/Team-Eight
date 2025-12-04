@@ -1,23 +1,50 @@
 import { Heart, Bed, Bath, Square, MapPin } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../supabase/client';
 import type { Property } from '../../types';
 
+interface ExtendedProperty extends Property {
+  bathrooms?: number;
+  size?: number;
+  updated_at?: string;
+}
+
 interface BuyerPropertyCardProps {
-  property: Property & {
-    bathrooms?: number;
-    size?: number;
-    updated_at?: string;
-  };
+  property: ExtendedProperty;
   showBadge?: boolean;
   badgeText?: string;
 }
 
 export default function BuyerPropertyCard({ property, showBadge, badgeText }: BuyerPropertyCardProps) {
   const navigate = useNavigate();
-  const [isSaving, setIsSaving] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Check if property is already saved
+  useEffect(() => {
+    const checkIfSaved = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data } = await supabase
+          .from('saved_properties')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('property_id', property.id)
+          .single();
+
+        if (data) {
+          setIsSaved(true);
+        }
+      } catch (err) {
+        // Not saved
+      }
+    };
+
+    checkIfSaved();
+  }, [property.id]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-GB', {
@@ -34,7 +61,7 @@ export default function BuyerPropertyCard({ property, showBadge, badgeText }: Bu
 
   const handleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (isSaving || isSaved) return;
+    if (isSaving) return;
 
     setIsSaving(true);
     try {
@@ -44,15 +71,29 @@ export default function BuyerPropertyCard({ property, showBadge, badgeText }: Bu
         return;
       }
 
-      const { error } = await supabase
-        .from('saved_properties')
-        .insert({
-          user_id: user.id,
-          property_id: property.id,
-        });
+      if (isSaved) {
+        // Remove from saved
+        const { error } = await supabase
+          .from('saved_properties')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('property_id', property.id);
 
-      if (!error) {
-        setIsSaved(true);
+        if (!error) {
+          setIsSaved(false);
+        }
+      } else {
+        // Add to saved
+        const { error } = await supabase
+          .from('saved_properties')
+          .insert({
+            user_id: user.id,
+            property_id: property.id,
+          });
+
+        if (!error) {
+          setIsSaved(true);
+        }
       }
     } catch (err) {
       console.error('Error saving property:', err);
@@ -61,7 +102,7 @@ export default function BuyerPropertyCard({ property, showBadge, badgeText }: Bu
     }
   };
 
-  const location = `${property.location || ''}${property.city ? (property.location ? ', ' : '') + property.city : ''}`;
+  const location = `${property.location || ''}${property.city ? (property.location ? ', ' : '') + property.city : ''}${property.postcode ? (property.location || property.city ? ' ' : '') + property.postcode : ''}`;
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
@@ -79,9 +120,9 @@ export default function BuyerPropertyCard({ property, showBadge, badgeText }: Bu
         )}
         <button
           onClick={handleSave}
-          disabled={isSaving || isSaved}
+          disabled={isSaving}
           className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full transition-colors"
-          aria-label="Save property"
+          aria-label={isSaved ? 'Remove from saved' : 'Save property'}
         >
           <Heart className={`w-5 h-5 ${isSaved ? 'text-red-500 fill-red-500' : 'text-gray-400'}`} />
         </button>
@@ -97,12 +138,10 @@ export default function BuyerPropertyCard({ property, showBadge, badgeText }: Bu
 
         {/* Property Details */}
         <div className="flex items-center gap-4 text-sm text-gray-600 mb-4">
-          {property.bedrooms !== undefined && (
-            <div className="flex items-center gap-1">
-              <Bed className="w-4 h-4" />
-              <span>{property.bedrooms}</span>
-            </div>
-          )}
+          <div className="flex items-center gap-1">
+            <Bed className="w-4 h-4" />
+            <span>{property.bedrooms}</span>
+          </div>
           {property.bathrooms !== undefined && (
             <div className="flex items-center gap-1">
               <Bath className="w-4 h-4" />

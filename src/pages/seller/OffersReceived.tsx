@@ -1,107 +1,69 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { supabase } from '../../supabase/client';
 import SellerSidebar from '../../components/seller/SellerSidebar';
 import SellerHeader from '../../components/seller/SellerHeader';
-import OfferStats from '../../components/seller/OfferStats';
-import OfferFilters from '../../components/seller/OfferFilters';
 import OfferCard from '../../components/seller/OfferCard';
-
-interface Buyer {
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone?: string;
-}
-
-interface Property {
-  id: number;
-  title: string;
-  image_url: string;
-  location: string;
-  city: string;
-  price: number;
-}
-
-interface Offer {
-  id: number;
-  user_id: string; // buyer_id
-  property_id: number;
-  offer_type: string;
-  status: string;
-  submitted_at: string;
-  offer_amount?: number | string | null;
-}
 
 interface CombinedOfferData {
   offerId: number;
   status: string;
   offerType: string;
   submittedAt: string;
-  offerAmount: number | string;
-  buyer: Buyer;
-  property: Property;
+  offerAmount: string | number;
+  buyer: {
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+  };
+  property: {
+    id: number;
+    title: string;
+    image_url: string;
+    location: string;
+    city: string;
+    price: number;
+  };
+}
+
+interface Offer {
+  id: number;
+  user_id: string;
+  property_id: number;
+  offer_type: string;
+  offer_amount: number | string;
+  status: 'pending' | 'accepted' | 'rejected';
+  submitted_at: string;
 }
 
 export default function OffersReceived() {
-  const { userId: urlUserId } = useParams<{ userId: string }>();
-  const navigate = useNavigate();
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const { userId } = useParams<{ userId: string }>();
+  const [offersData, setOffersData] = useState<CombinedOfferData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [offersData, setOffersData] = useState<CombinedOfferData[]>([]);
-  
-  // Filter states
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [sortBy, setSortBy] = useState('newest');
-  const [offerTypeFilter, setOfferTypeFilter] = useState('all');
 
-  // Validate userId from URL matches current session user
   useEffect(() => {
-    const validateUser = async () => {
-      if (!urlUserId) {
-        setIsAuthorized(false);
-        return;
-      }
-
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session?.user) {
-        navigate('/signin');
-        return;
-      }
-
-      if (session.user.id !== urlUserId) {
-        navigate('/unauthorized');
-        setIsAuthorized(false);
-        return;
-      }
-
-      setIsAuthorized(true);
-    };
-
-    validateUser();
-  }, [urlUserId, navigate]);
-
-  // Fetch offers data
-  useEffect(() => {
-    if (!isAuthorized) return;
-
     const fetchOffers = async () => {
+      if (!userId) return;
+
       try {
         setLoading(true);
         setError(null);
 
-        // Step 1: Get logged-in seller
+        // Step 1: Get current user
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
         if (userError || !user) {
           throw new Error('Failed to get authenticated user');
         }
 
-        // Step 2: Get seller properties
-        const { data: sellerProperties, error: propertiesError } = await supabase
+        // Step 2: Verify userId matches
+        if (user.id !== userId) {
+          throw new Error('Unauthorized');
+        }
+
+        // Step 3: Fetch seller's properties
+        const { data: properties, error: propertiesError } = await supabase
           .from('properties')
           .select('id, title, image_url, location, city, price')
           .eq('user_id', user.id);
@@ -110,16 +72,16 @@ export default function OffersReceived() {
           throw new Error(`Failed to fetch properties: ${propertiesError.message}`);
         }
 
-        if (!sellerProperties || sellerProperties.length === 0) {
+        const sellerProperties = properties || [];
+
+        // Step 4: Fetch offers for seller's properties
+        const propertyIds = sellerProperties.map((p: any) => p.id);
+        if (propertyIds.length === 0) {
           setOffersData([]);
           setLoading(false);
           return;
         }
 
-        // Step 3: Extract property IDs
-        const propertyIds = sellerProperties.map((p) => p.id);
-
-        // Step 4: Fetch offers for these properties
         const { data: offers, error: offersError } = await supabase
           .from('offers')
           .select('*')
@@ -137,8 +99,8 @@ export default function OffersReceived() {
         }
 
         // Step 5: For each offer, fetch buyer info and combine data
-        const combinedData: CombinedOfferData[] = await Promise.all(
-          offers.map(async (offer: Offer) => {
+        const combinedData = await Promise.all(
+          (offers as Offer[]).map(async (offer: Offer): Promise<CombinedOfferData | null> => {
             // Fetch buyer info
             const { data: buyer, error: buyerError } = await supabase
               .from('users')
@@ -160,7 +122,7 @@ export default function OffersReceived() {
                   last_name: 'Buyer',
                   email: 'N/A',
                 },
-                property: sellerProperties.find((p) => p.id === offer.property_id) || {
+                property: sellerProperties.find((p: any) => p.id === offer.property_id) || {
                   id: offer.property_id,
                   title: 'Unknown Property',
                   image_url: '',
@@ -172,7 +134,7 @@ export default function OffersReceived() {
             }
 
             // Find the property for this offer
-            const property = sellerProperties.find((p) => p.id === offer.property_id);
+            const property = sellerProperties.find((p: any) => p.id === offer.property_id);
             if (!property) {
               console.error(`Property not found for offer ${offer.id}`);
               return null;
@@ -208,102 +170,24 @@ export default function OffersReceived() {
       } catch (err: any) {
         console.error('Error fetching offers:', err);
         setError(err.message || 'Failed to load offers. Please try again.');
+        setOffersData([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchOffers();
-  }, [isAuthorized]);
-
-  // Filter and sort offers
-  const filteredAndSortedOffers = offersData
-    .filter((offer) => {
-      // Search filter (buyer name or property title)
-      const searchLower = searchQuery.toLowerCase();
-      const buyerName = `${offer.buyer.first_name} ${offer.buyer.last_name}`.toLowerCase();
-      const propertyTitle = offer.property.title.toLowerCase();
-      const matchesSearch =
-        searchQuery === '' || buyerName.includes(searchLower) || propertyTitle.includes(searchLower);
-
-      // Status filter
-      const matchesStatus = statusFilter === 'all' || offer.status.toLowerCase() === statusFilter.toLowerCase();
-
-      // Offer type filter
-      const matchesOfferType =
-        offerTypeFilter === 'all' || offer.offerType.toLowerCase() === offerTypeFilter.toLowerCase();
-
-      return matchesSearch && matchesStatus && matchesOfferType;
-    })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'newest':
-          return new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime();
-        case 'oldest':
-          return new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime();
-        case 'amount-high':
-          const amountA = typeof a.offerAmount === 'number' ? a.offerAmount : 0;
-          const amountB = typeof b.offerAmount === 'number' ? b.offerAmount : 0;
-          return amountB - amountA;
-        case 'amount-low':
-          const amountA2 = typeof a.offerAmount === 'number' ? a.offerAmount : 0;
-          const amountB2 = typeof b.offerAmount === 'number' ? b.offerAmount : 0;
-          return amountA2 - amountB2;
-        default:
-          return 0;
-      }
-    });
-
-  // Calculate statistics
-  const totalOffers = offersData.length;
-  const pendingOffers = offersData.filter((o) => o.status.toLowerCase() === 'pending').length;
-  const acceptedOffers = offersData.filter((o) => o.status.toLowerCase() === 'accepted').length;
-  const rejectedOffers = offersData.filter((o) => o.status.toLowerCase() === 'rejected').length;
-
-  // Show loading while validating authorization
-  if (isAuthorized === null) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show unauthorized message
-  if (isAuthorized === false) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Unauthorized</h1>
-          <p className="text-gray-600">You don't have permission to access this page.</p>
-        </div>
-      </div>
-    );
-  }
+  }, [userId]);
 
   return (
-    <div className="min-h-screen bg-gray-50" style={{ backgroundColor: '#f7f9fc' }}>
+    <div className="min-h-screen bg-white">
       <div className="flex">
-        {/* Sidebar */}
         <SellerSidebar />
-
-        {/* Main Content */}
         <main className="flex-1 lg:ml-0">
-          {/* Top Header */}
           <SellerHeader />
+          <div className="px-8 py-6">
+            <h1 className="text-3xl font-bold text-gray-900 mb-6">Offers Received</h1>
 
-          {/* Page Content */}
-          <div className="p-6 max-w-7xl mx-auto">
-            {/* Page Header */}
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">Offers Received</h1>
-              <p className="text-gray-600">Manage and respond to offers from potential buyers</p>
-            </div>
-
-            {/* Loading State */}
             {loading ? (
               <div className="flex items-center justify-center py-12">
                 <div className="text-center">
@@ -312,64 +196,31 @@ export default function OffersReceived() {
                 </div>
               </div>
             ) : error ? (
-              /* Error State */
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
                 {error}
               </div>
+            ) : offersData.length === 0 ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500 text-lg">No offers received yet.</p>
+                <p className="text-gray-400 text-sm mt-2">Offers on your properties will appear here.</p>
+              </div>
             ) : (
-              <>
-                {/* Summary Cards */}
-                <div className="mb-8">
-                  <OfferStats
-                    total={totalOffers}
-                    pending={pendingOffers}
-                    accepted={acceptedOffers}
-                    rejected={rejectedOffers}
+              <div className="space-y-6">
+                {offersData.map((offerData) => (
+                  <OfferCard
+                    key={offerData.offerId}
+                    offer={{
+                      id: offerData.offerId,
+                      offer_type: offerData.offerType,
+                      status: offerData.status,
+                      submitted_at: offerData.submittedAt,
+                      offer_amount: offerData.offerAmount,
+                    }}
+                    buyer={offerData.buyer}
+                    property={offerData.property}
                   />
-                </div>
-
-                {/* Search and Filters */}
-                <div className="mb-6">
-                  <OfferFilters
-                    searchQuery={searchQuery}
-                    onSearchChange={setSearchQuery}
-                    statusFilter={statusFilter}
-                    onStatusFilterChange={setStatusFilter}
-                    sortBy={sortBy}
-                    onSortByChange={setSortBy}
-                    offerTypeFilter={offerTypeFilter}
-                    onOfferTypeFilterChange={setOfferTypeFilter}
-                  />
-                </div>
-
-                {/* Offers List */}
-                {filteredAndSortedOffers.length === 0 ? (
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-12 text-center">
-                    <p className="text-gray-500 text-lg">
-                      {offersData.length === 0
-                        ? 'No offers received yet. Offers will appear here once buyers submit them.'
-                        : 'No offers match your current filters.'}
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {filteredAndSortedOffers.map((offer) => (
-                      <OfferCard
-                        key={offer.offerId}
-                        offer={{
-                          id: offer.offerId,
-                          offer_type: offer.offerType,
-                          status: offer.status,
-                          submitted_at: offer.submittedAt,
-                          offer_amount: offer.offerAmount,
-                        }}
-                        buyer={offer.buyer}
-                        property={offer.property}
-                      />
-                    ))}
-                  </div>
-                )}
-              </>
+                ))}
+              </div>
             )}
           </div>
         </main>
@@ -377,4 +228,3 @@ export default function OffersReceived() {
     </div>
   );
 }
-
