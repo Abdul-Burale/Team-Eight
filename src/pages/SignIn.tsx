@@ -1,7 +1,7 @@
 import {supabase} from "../supabase/client.ts"
 import logo from '../assets/logo.png'
 import { useNavigate } from "react-router-dom";
-import {useState} from "react"
+import {useState, useEffect} from "react"
 
 async function handleLogin(email: string, password: string) {
   try {
@@ -66,14 +66,54 @@ export default function SignIn() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [loadingRole, setLoadingRole] = useState(true);
+
+  // Check if user is already logged in and redirect
+  useEffect(() => {
+    const checkAuthAndRedirect = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (user) {
+          // User is already logged in, fetch role and redirect
+          const { data: profile } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+          if (profile?.role && user.id) {
+            if (profile.role === "seller") {
+              navigate(`/seller/${user.id}/dashboard`);
+            } else if (profile.role === "buyer") {
+              navigate(`/buyer/dashboard/${user.id}`);
+            } else if (profile.role === "agent") {
+              navigate(`/agent/dashboard/${user.id}`);
+            } else if (profile.role === "admin") {
+              navigate(`/admin/${user.id}`);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Error checking auth status:', err);
+      } finally {
+        setLoadingRole(false);
+      }
+    };
+
+    checkAuthAndRedirect();
+  }, [navigate]);
 
   const submitForm = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(""); // Clear previous errors
+    setLoading(true);
 
     const result = await handleLogin(email, password);
     
     if (!result.success) {
+      setLoading(false);
       // Handle specific error cases
       if (result.error?.includes("Invalid login credentials") || 
           result.error?.includes("Email not confirmed") ||
@@ -92,23 +132,43 @@ export default function SignIn() {
     const userId = result.userId;
     
     if (!userId) {
+      setLoading(false);
       setErrorMsg("Failed to get user ID. Please try again.");
       return;
     }
 
-    if (role === "seller") {
-      navigate(`/seller/${userId}/dashboard`);
-    } else if (role === "buyer") {
-      navigate(`/buyer/dashboard/${userId}`);
-    } else if (role === "agent") {
-      navigate(`/agent/dashboard/${userId}`);
-    } else if (role === "admin") {
-      navigate(`/admin/${userId}`);
+    // Only redirect if we have a valid role and userId
+    if (role && userId) {
+      if (role === "seller") {
+        navigate(`/seller/${userId}/dashboard`);
+      } else if (role === "buyer") {
+        navigate(`/buyer/dashboard/${userId}`);
+      } else if (role === "agent") {
+        navigate(`/agent/dashboard/${userId}`);
+      } else if (role === "admin") {
+        navigate(`/admin/${userId}`);
+      } else {
+        // Fallback for unknown roles
+        setLoading(false);
+        navigate("/");
+      }
     } else {
-      // Fallback for unknown roles
-      navigate("/");
+      setLoading(false);
+      setErrorMsg("Failed to get user information. Please try again.");
     }
   }
+    // Show loading while checking if user is already authenticated
+    if (loadingRole) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white">
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p className="mt-4 text-gray-600">Loading...</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4 py-12">
         <div className="bg-white flex flex-col gap-6 rounded-xl border w-full max-w-md shadow-sm">
@@ -179,10 +239,11 @@ export default function SignIn() {
               {/* Submit Button */}
               <button
                 type="submit"
+                disabled={loading}
                 className="w-full h-10 rounded-md bg-gray-950 text-white text-sm font-medium
-                           hover:bg-gray-700 transition"
+                           hover:bg-gray-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition"
               >
-                Sign In
+                {loading ? "Signing In..." : "Sign In"}
               </button>
   
               {/* Sign Up */}

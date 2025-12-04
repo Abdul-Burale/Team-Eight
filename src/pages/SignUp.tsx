@@ -1,9 +1,16 @@
 import {supabase} from '../supabase/client.ts'
 import logo from "../assets/logo.png";
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-async function handleSignUp(email: string, password: string, firstName: string, lastName: string, role: string) {
+async function handleSignUp(
+    email: string, 
+    password: string, 
+    firstName: string, 
+    lastName: string, 
+    phone: string,
+    role: string
+) {
     try {
         // Step 1: Create Supabase Auth user (ONLY email and password)
         const { data, error } = await supabase.auth.signUp({
@@ -30,19 +37,33 @@ async function handleSignUp(email: string, password: string, firstName: string, 
 
         // Step 3: UPDATE the user row created by the database trigger
         // DO NOT INSERT - the trigger already created the row
+        // For buyer role, ensure we store phone number
+        const updateData: {
+            first_name: string;
+            last_name: string;
+            role: string;
+            phone?: string;
+        } = {
+            first_name: firstName,
+            last_name: lastName,
+            role: role,
+        };
+
+        // Add phone if provided (especially for buyers)
+        if (phone && phone.trim()) {
+            updateData.phone = phone.trim();
+        }
+
         const { error: updateError } = await supabase
             .from('users')
-            .update({
-                first_name: firstName,
-                last_name: lastName,
-                role: role,
-            })
+            .update(updateData)
             .eq('id', userId);
 
         console.log("UPDATED USER:", {
             id: userId,
             first_name: firstName,
             last_name: lastName,
+            phone: phone || null,
             role: role
         });
 
@@ -54,7 +75,16 @@ async function handleSignUp(email: string, password: string, firstName: string, 
             };
         }
 
-        return { success: true, user: user };
+        // Check if user needs email confirmation
+        const needsEmailConfirmation = !data.session;
+
+        return { 
+            success: true, 
+            user: user,
+            userId: userId,
+            role: role,
+            needsEmailConfirmation: needsEmailConfirmation
+        };
     } catch (err: any) {
         console.error('Signup error:', err);
         return { 
@@ -69,58 +99,128 @@ export default function SignUp() {
     const [firstName, setFirstName] = useState("");
     const [lastName, setLastName] = useState("");
     const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [role, setRole] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
+    const [successMsg, setSuccessMsg] = useState("");
     const [termsAccepted, setTermsAccepted] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     const submitForm = async (e: React.FormEvent)=> {
         e.preventDefault();
+        setErrorMsg("");
+        setSuccessMsg("");
+        setLoading(true);
 
         // Validation
         if (!firstName.trim()) {
             setErrorMsg("First name is required");
+            setLoading(false);
             return;
         }
 
         if (!lastName.trim()) {
             setErrorMsg("Last name is required");
+            setLoading(false);
             return;
         }
 
         if (password !== confirmPassword) {
             setErrorMsg("Passwords do not match");
+            setLoading(false);
             return;
         }
 
         if (password.length < 8) {
             setErrorMsg("Password must be at least 8 characters");
+            setLoading(false);
             return;
         }
 
         if (!role) {
             setErrorMsg("Please select a role");
+            setLoading(false);
             return;
         }
 
         if (!termsAccepted) {
-            setErrorMsg("You must agree to the terms.")
+            setErrorMsg("You must agree to the terms.");
+            setLoading(false);
             return;
         }
 
-        const result = await handleSignUp(email, password, firstName, lastName, role);
+        const result = await handleSignUp(email, password, firstName, lastName, phone, role);
 
         if (result.success) {
-            navigate('/')
-        }
-        else {
+            // Check if email confirmation is needed
+            if (result.needsEmailConfirmation) {
+                setSuccessMsg("Account created! Please check your email to confirm your account before signing in.");
+                // Wait a bit then redirect to signin
+                setTimeout(() => {
+                    navigate('/signin');
+                }, 3000);
+            } else {
+                // User is already logged in (email confirmation disabled)
+                // Redirect based on role
+                if (result.userId) {
+                    if (result.role === "seller") {
+                        navigate(`/seller/${result.userId}/dashboard`);
+                    } else if (result.role === "buyer") {
+                        navigate(`/buyer/dashboard/${result.userId}`);
+                    } else if (result.role === "agent") {
+                        navigate(`/agent/dashboard/${result.userId}`);
+                    } else if (result.role === "admin") {
+                        navigate(`/admin/${result.userId}`);
+                    } else {
+                        navigate('/');
+                    }
+                } else {
+                    navigate('/');
+                }
+            }
+        } else {
             setErrorMsg(result.error || "Something went wrong");
-            return;
         }
+        setLoading(false);
     };
 
     const navigate = useNavigate();
+
+    // Handle automatic redirect if user is already logged in
+    useEffect(() => {
+        const checkAuthAndRedirect = async () => {
+            try {
+                const { data: { user } } = await supabase.auth.getUser();
+                
+                if (user) {
+                    // User is already logged in, fetch role and redirect
+                    const { data: profile } = await supabase
+                        .from('users')
+                        .select('role')
+                        .eq('id', user.id)
+                        .single();
+
+                    if (profile?.role) {
+                        if (profile.role === "seller") {
+                            navigate(`/seller/${user.id}/dashboard`);
+                        } else if (profile.role === "buyer") {
+                            navigate(`/buyer/dashboard/${user.id}`);
+                        } else if (profile.role === "agent") {
+                            navigate(`/agent/dashboard/${user.id}`);
+                        } else if (profile.role === "admin") {
+                            navigate(`/admin/${user.id}`);
+                        }
+                    }
+                }
+            } catch (err) {
+                console.error('Error checking auth status:', err);
+            }
+        };
+
+        checkAuthAndRedirect();
+    }, [navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-blue-50 to-white px-4 py-12">
@@ -141,6 +241,7 @@ export default function SignUp() {
           <form className="space-y-4" onSubmit={submitForm}>
 
             {errorMsg && (<div className="text-red-600 text-sm">{errorMsg}</div>)}
+            {successMsg && (<div className="text-green-600 text-sm bg-green-50 p-3 rounded-md">{successMsg}</div>)}
 
             {/* First Name and Last Name */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -180,6 +281,21 @@ export default function SignUp() {
                 value={email}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) =>  setEmail(e.target.value)}
                 placeholder="your.email@example.com"
+                className="w-full rounded-md border px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+              />
+            </div>
+
+            {/* Phone (Optional) */}
+            <div className="space-y-2">
+              <label htmlFor="phone" className="text-sm font-medium">
+                Phone Number <span className="text-gray-400 text-xs">(Optional)</span>
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
+                placeholder="+44 20 1234 5678"
                 className="w-full rounded-md border px-3 py-2 text-sm bg-white focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
               />
             </div>
@@ -249,9 +365,10 @@ export default function SignUp() {
             {/* Button */}
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-md py-2 text-sm font-medium transition"
+              disabled={loading}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white rounded-md py-2 text-sm font-medium transition"
             >
-              Create Account
+              {loading ? "Creating Account..." : "Create Account"}
             </button>
 
             {/* Already have account */}

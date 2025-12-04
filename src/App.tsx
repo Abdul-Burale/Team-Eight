@@ -6,7 +6,6 @@ import Home from "./pages/Home";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Search from "./pages/Search";
-import AddListing from "./pages/AddListing";
 import PropertyDetailsPage from "./pages/PropertyDetails";
 import ListingSuccess from "./pages/ListingSuccess";
 import SellerDashboard from "./pages/seller/SellerDashboard";
@@ -41,7 +40,6 @@ function App() {
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/search" element={<Search />} />
-          <Route path="/add" element={<AddListing />} />
           <Route path="/property/:id" element={<PropertyDetailsPage />} />
           <Route path="/listing-success" element={<ListingSuccess />} />
           <Route

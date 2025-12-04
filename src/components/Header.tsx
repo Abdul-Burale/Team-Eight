@@ -1,4 +1,4 @@
-import { Bell, Heart, Home, LogIn, Phone, Search, TrendingUp } from 'lucide-react';
+import { Bell, Home, LogIn, Phone, Search, TrendingUp } from 'lucide-react';
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from '../context/AuthContext'
 import logo from '../assets/logo.png'
@@ -18,8 +18,7 @@ export function Header() {
         {to: '/search', id: 'search', label: 'Search', icon: Search},
         {to: '/alerts', id: 'alerts', label: 'Alerts', icon: Bell, protected: true},
         {to: '/market', id: 'market', label: 'Market Intelligence', icon: TrendingUp},
-        {to: '/contact', id: 'contact', label: 'Contact', icon: Phone},
-        {to: '/add', id: 'add', label: 'Add a Listing', icon: Heart, protected: true}
+        {to: '/contact', id: 'contact', label: 'Contact', icon: Phone}
     ];
 
     return (
