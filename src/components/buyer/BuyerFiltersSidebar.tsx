@@ -11,6 +11,8 @@ interface BuyerFiltersSidebarProps {
   setBedrooms: (value: string) => void;
   propertyType: string;
   setPropertyType: (value: string) => void;
+  listingType: string;
+  setListingType: (value: string) => void;
   nearPark: boolean;
   setNearPark: (value: boolean) => void;
   nearSchool: boolean;
@@ -34,6 +36,8 @@ export default function BuyerFiltersSidebar({
   setBedrooms,
   propertyType,
   setPropertyType,
+  listingType,
+  setListingType,
   nearPark,
   setNearPark,
   nearSchool,
@@ -137,6 +141,25 @@ export default function BuyerFiltersSidebar({
                     {type}
                   </option>
                 ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            </div>
+          </div>
+
+          {/* Listing Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Listing Type
+            </label>
+            <div className="relative">
+              <select
+                value={listingType}
+                onChange={(e) => setListingType(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-lg border border-gray-300 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none bg-white"
+              >
+                <option value="">All</option>
+                <option value="sell">Sell</option>
+                <option value="rent">Rent</option>
               </select>
               <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
             </div>

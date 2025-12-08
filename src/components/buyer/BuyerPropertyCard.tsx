@@ -1,5 +1,5 @@
 import { Heart, Bed, Bath, Square, MapPin } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { supabase } from '../../supabase/client';
 import type { Property } from '../../types';
@@ -17,7 +17,6 @@ interface BuyerPropertyCardProps {
 }
 
 export default function BuyerPropertyCard({ property, showBadge, badgeText }: BuyerPropertyCardProps) {
-  const navigate = useNavigate();
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -55,19 +54,17 @@ export default function BuyerPropertyCard({ property, showBadge, badgeText }: Bu
     }).format(price);
   };
 
-  const handleViewProperty = () => {
-    navigate(`/property/${property.id}`);
-  };
-
   const handleSave = async (e: React.MouseEvent) => {
     e.stopPropagation();
+    e.preventDefault();
     if (isSaving) return;
 
     setIsSaving(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        navigate('/signin');
+        // Redirect to signin - open in new window to prevent navigation
+        window.location.href = '/signin';
         return;
       }
 
@@ -105,7 +102,11 @@ export default function BuyerPropertyCard({ property, showBadge, badgeText }: Bu
   const location = `${property.location || ''}${property.city ? (property.location ? ', ' : '') + property.city : ''}${property.postcode ? (property.location || property.city ? ' ' : '') + property.postcode : ''}`;
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200">
+    <Link
+      to={`/property/${property.id}`}
+      className="block w-full"
+    >
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-all duration-200 cursor-pointer">
       {/* Image Container */}
       <div className="relative">
         <img
@@ -159,15 +160,13 @@ export default function BuyerPropertyCard({ property, showBadge, badgeText }: Bu
         {/* Price */}
         <p className="text-xl font-bold text-gray-900 mb-4">{formatPrice(property.price)}</p>
 
-        {/* View Property Button */}
-        <button
-          onClick={handleViewProperty}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-        >
+        {/* View Property Button - Now just visual since whole card is clickable */}
+        <div className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg font-medium text-center">
           View Property
-        </button>
+        </div>
       </div>
-    </div>
+      </div>
+    </Link>
   );
 }
 

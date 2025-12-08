@@ -24,6 +24,7 @@ export default function SearchProperties() {
   const [maxPrice, setMaxPrice] = useState('');
   const [bedrooms, setBedrooms] = useState('');
   const [propertyType, setPropertyType] = useState('');
+  const [listingType, setListingType] = useState('');
   const [nearPark, setNearPark] = useState(false);
   const [nearSchool, setNearSchool] = useState(false);
   const [quietArea, setQuietArea] = useState(false);
@@ -65,6 +66,11 @@ export default function SearchProperties() {
     // Property type filter
     if (propertyType) {
       query = query.eq('property_type', propertyType);
+    }
+
+    // Listing type filter
+    if (listingType) {
+      query = query.eq('listing_type', listingType.toLowerCase());
     }
 
     // Toggle filters
@@ -211,6 +217,7 @@ export default function SearchProperties() {
     setMaxPrice('');
     setBedrooms('');
     setPropertyType('');
+    setListingType('');
     setNearPark(false);
     setNearSchool(false);
     setQuietArea(false);
@@ -348,6 +355,8 @@ export default function SearchProperties() {
                 setBedrooms={setBedrooms}
                 propertyType={propertyType}
                 setPropertyType={setPropertyType}
+                listingType={listingType}
+                setListingType={setListingType}
                 nearPark={nearPark}
                 setNearPark={setNearPark}
                 nearSchool={nearSchool}

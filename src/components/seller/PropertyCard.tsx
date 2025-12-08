@@ -42,7 +42,7 @@ export default function PropertyCard({ property }: PropertyCardProps) {
     );
   }
 
-  const propertyLink = `/seller/${userId}/property/${property.id}`;
+  const propertyLink = `/property/${property.id}`;
 
   return (
     <Link

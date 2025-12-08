@@ -6,14 +6,13 @@ import Home from "./pages/Home";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 import Search from "./pages/Search";
-import PropertyDetailsPage from "./pages/PropertyDetails";
+import PropertyDetailsPage from "./pages/property/PropertyDetailsPage";
 import ListingSuccess from "./pages/ListingSuccess";
 import SellerDashboard from "./pages/seller/SellerDashboard";
 import AddProperty from "./pages/seller/AddProperty";
 import MyProperties from "./pages/seller/MyProperties";
 import OffersReceived from "./pages/seller/OffersReceived";
 import ProfileSettings from "./pages/seller/ProfileSettings";
-import SellerPropertyDetailsPage from "./pages/seller/PropertyDetailsPage";
 import BuyerDashboard from "./pages/buyer/BuyerDashboard";
 import SearchProperties from "./pages/buyer/SearchProperties";
 import AgentDashboard from "./pages/agent/AgentDashboard";
@@ -106,14 +105,6 @@ function App() {
             element={
               <ProtectedRoute requiredRole="seller">
                 <ProfileSettings />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/seller/:userId/property/:propertyId"
-            element={
-              <ProtectedRoute requiredRole="seller">
-                <SellerPropertyDetailsPage />
               </ProtectedRoute>
             }
           />
