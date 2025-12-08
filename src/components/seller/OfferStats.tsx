@@ -65,3 +65,4 @@ export default function OfferStats({ total, pending, accepted, rejected }: Offer
 }
 
 
+
