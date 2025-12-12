@@ -9,7 +9,7 @@ import SavedPropertyCard from '../../components/buyer/SavedPropertyCard';
 import OfferListItem from '../../components/buyer/OfferListItem';
 import AlertListItem from '../../components/buyer/AlertListItem';
 import { Heart, FileText, CheckCircle, Bell } from 'lucide-react';
-import { BuyerOffer } from '../../types/buyerOffer';
+import type { BuyerOffer } from '../../types/buyerOffer';
 
 interface SavedProperty {
   id: number;

@@ -4,7 +4,7 @@ import { supabase } from "../../supabase/client";
 import BuyerSidebar from "../../components/buyer/BuyerSidebar";
 import BuyerHeader from "../../components/buyer/BuyerHeader";
 import OfferListItem from "../../components/buyer/OfferListItem";
-import { BuyerOffer } from "../../types/buyerOffer";
+import type { BuyerOffer } from "../../types/buyerOffer";
 
 export default function BuyerOffers() {
   const { userId } = useParams<{ userId: string }>();
