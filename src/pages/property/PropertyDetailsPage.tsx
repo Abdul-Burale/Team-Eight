@@ -74,8 +74,7 @@ export default function PropertyDetailsPage() {
   const [offerAmountError, setOfferAmountError] = useState<string | null>(null);
   const [submittingOffer, setSubmittingOffer] = useState(false);
   const [offerError, setOfferError] = useState<string | null>(null);
-  const [hasExistingOffer, setHasExistingOffer] = useState(false);
-  const [existingOfferStatus, setExistingOfferStatus] = useState<string | null>(null);
+  const [latestOffer, setLatestOffer] = useState<{ id: number; status: string; submitted_at: string } | null>(null);
 
   // Fetch user role and property
   useEffect(() => {
@@ -121,17 +120,19 @@ export default function PropertyDetailsPage() {
             // If error is PGRST116 (no rows), property is not saved (this is expected)
             setIsSaved(!savedError && !!savedData);
 
-            // Check if buyer already made an offer on this property
-            const { data: existingOffer, error: offerError } = await supabase
+            // Fetch the latest offer for this property by this buyer
+            const { data: offersData, error: offerError } = await supabase
               .from('offers')
-              .select('id, status')
+              .select('id, status, submitted_at')
               .eq('user_id', user.id)
               .eq('property_id', Number(id))
-              .maybeSingle();
+              .order('submitted_at', { ascending: false })
+              .limit(1);
             
-            if (!offerError && existingOffer) {
-              setHasExistingOffer(true);
-              setExistingOfferStatus(existingOffer.status);
+            if (!offerError && offersData && offersData.length > 0) {
+              setLatestOffer(offersData[0]);
+            } else {
+              setLatestOffer(null);
             }
           }
         }
@@ -291,10 +292,15 @@ export default function PropertyDetailsPage() {
       navigate('/signin');
       return;
     }
-    if (hasExistingOffer) {
-      // Offer already exists, don't allow another
+    
+    // Check if buyer can make a new offer
+    const canMakeOffer = !latestOffer || latestOffer.status === 'rejected';
+    
+    if (!canMakeOffer) {
+      // Offer is pending or accepted, don't allow another
       return;
     }
+    
     setShowOfferModal(true);
   };
 
@@ -321,16 +327,17 @@ export default function PropertyDetailsPage() {
         return;
       }
 
-      // Check for duplicate offer
-      const { data: existingOffer } = await supabase
+      // Check for duplicate pending offer
+      const { data: existingOffers } = await supabase
         .from('offers')
-        .select('id')
+        .select('id, status')
         .eq('user_id', user.id)
         .eq('property_id', Number(id))
-        .maybeSingle();
+        .eq('status', 'pending')
+        .limit(1);
 
-      if (existingOffer) {
-        setOfferError('You have already made an offer on this property.');
+      if (existingOffers && existingOffers.length > 0) {
+        setOfferError('You already have a pending offer on this property.');
         setSubmittingOffer(false);
         return;
       }
@@ -353,8 +360,18 @@ export default function PropertyDetailsPage() {
       } else {
         // Success - close modal and update state
         setShowOfferModal(false);
-        setHasExistingOffer(true);
-        setExistingOfferStatus('pending');
+        // Refresh latest offer
+        const { data: offersData } = await supabase
+          .from('offers')
+          .select('id, status, submitted_at')
+          .eq('user_id', user.id)
+          .eq('property_id', Number(id))
+          .order('submitted_at', { ascending: false })
+          .limit(1);
+        
+        if (offersData && offersData.length > 0) {
+          setLatestOffer(offersData[0]);
+        }
         setOfferAmount('');
         setOfferType('buy');
         setOfferAmountError(null);
@@ -908,16 +925,27 @@ export default function PropertyDetailsPage() {
                       </button>
                       <button
                         onClick={handleMakeOffer}
-                        disabled={hasExistingOffer}
+                        disabled={latestOffer && latestOffer.status !== 'rejected'}
                         className={`flex items-center gap-2 px-6 py-3 rounded-lg transition-colors ${
-                          hasExistingOffer
+                          latestOffer && latestOffer.status !== 'rejected'
                             ? 'bg-gray-200 text-gray-600 cursor-not-allowed'
                             : 'bg-green-600 text-white hover:bg-green-700'
                         }`}
                       >
                         <MessageSquare className="w-4 h-4" />
-                        {hasExistingOffer ? `Offer Sent ${existingOfferStatus === 'accepted' ? '✓ (Accepted)' : existingOfferStatus === 'rejected' ? '✗ (Rejected)' : '✓'}` : 'Make an Offer'}
+                        {latestOffer?.status === 'pending' 
+                          ? 'Offer Pending' 
+                          : latestOffer?.status === 'accepted' 
+                          ? 'Offer Accepted ✓' 
+                          : latestOffer?.status === 'rejected'
+                          ? 'Make New Offer'
+                          : 'Make an Offer'}
                       </button>
+                      {latestOffer?.status === 'rejected' && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Your previous offer was rejected. You may submit a new offer.
+                        </p>
+                      )}
                     </div>
                     {saveError && (
                       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-lg text-sm">
