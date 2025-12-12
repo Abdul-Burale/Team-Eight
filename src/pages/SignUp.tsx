@@ -75,6 +75,15 @@ export default function SignUp() {
     const [role, setRole] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
     const [termsAccepted, setTermsAccepted] = useState(false);
+    const [agreementError, setAgreementError] = useState('');
+
+    const openTerms = () => {
+        window.open('/terms-and-conditions.pdf', '_blank');
+    };
+
+    const openPrivacy = () => {
+        window.open('/user-agreement.pdf', '_blank');
+    };
 
     const submitForm = async (e: React.FormEvent)=> {
         e.preventDefault();
@@ -106,9 +115,13 @@ export default function SignUp() {
         }
 
         if (!termsAccepted) {
-            setErrorMsg("You must agree to the terms.")
+            setAgreementError('You must agree to the Terms and Conditions to continue.');
+            setErrorMsg("You must agree to the terms.");
             return;
         }
+        
+        // Clear agreement error if terms are accepted
+        setAgreementError('');
 
         const result = await handleSignUp(email, password, firstName, lastName, role);
 
@@ -232,25 +245,51 @@ export default function SignUp() {
             </div>
 
             {/* Terms */}
-            <div className="flex items-start gap-2 py-2">
-              <input type="checkbox" id="terms" className="mt-1" onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTermsAccepted(e.target.checked)
-  } />
-              <label htmlFor="terms" className="text-sm text-gray-600">
-                I agree to the{" "}
-                <button type="button" className="text-blue-600 hover:underline">
-                  Terms and Conditions
-                </button>{" "}
-                and{" "}
-                <button type="button" className="text-blue-600 hover:underline">
-                  Privacy Policy
-                </button>
-              </label>
+            <div className="py-2">
+              <div className="flex items-start gap-2">
+                <input 
+                  type="checkbox" 
+                  id="terms" 
+                  className="mt-1" 
+                  checked={termsAccepted}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setTermsAccepted(e.target.checked);
+                    if (e.target.checked) {
+                      setAgreementError('');
+                    }
+                  }}
+                />
+                <label htmlFor="terms" className="text-sm text-gray-600">
+                  I agree to the{" "}
+                  <span
+                    onClick={openTerms}
+                    className="text-blue-600 underline cursor-pointer mx-1"
+                  >
+                    Terms and Conditions
+                  </span>{" "}
+                  and{" "}
+                  <span
+                    onClick={openPrivacy}
+                    className="text-blue-600 underline cursor-pointer mx-1"
+                  >
+                    Privacy Policy
+                  </span>
+                </label>
+              </div>
+              {agreementError && (
+                <p className="text-red-500 text-sm mt-1">{agreementError}</p>
+              )}
             </div>
 
             {/* Button */}
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-md py-2 text-sm font-medium transition"
+              disabled={!termsAccepted}
+              className={`w-full rounded-md py-2 text-sm font-medium transition ${
+                termsAccepted 
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white' 
+                  : 'bg-gray-300 cursor-not-allowed text-gray-500'
+              }`}
             >
               Create Account
             </button>
