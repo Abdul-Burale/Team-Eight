@@ -73,10 +73,16 @@ export default function BuyerOffers() {
         .from("offers")
         .select(`
           id,
+          offer_amount,
           offer_type,
           status,
           submitted_at,
-          properties (*)
+          properties (
+            id,
+            title,
+            location,
+            image_url
+          )
         `)
         .eq("user_id", currentUserId)
         .order("submitted_at", { ascending: false });

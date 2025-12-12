@@ -25,16 +25,17 @@ interface OfferListItemProps {
 
 export default function OfferListItem({ offer }: OfferListItemProps) {
 
-  const formatPrice = (amount: number | string) => {
+  const formatPrice = (amount: number | string | null | undefined) => {
+    if (amount === null || amount === undefined) {
+      return '---';
+    }
     if (typeof amount === 'string') {
       return amount;
     }
-    return new Intl.NumberFormat('en-GB', {
-      style: 'currency',
-      currency: 'GBP',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+    if (isNaN(amount) || amount <= 0) {
+      return '---';
+    }
+    return `£${Number(amount).toLocaleString()}`;
   };
 
   const getStatusBadgeStyle = (status: string) => {

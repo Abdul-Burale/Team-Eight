@@ -71,6 +71,7 @@ export default function PropertyDetailsPage() {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [offerType, setOfferType] = useState<'buy' | 'rent'>('buy');
   const [offerAmount, setOfferAmount] = useState<string>('');
+  const [offerAmountError, setOfferAmountError] = useState<string | null>(null);
   const [submittingOffer, setSubmittingOffer] = useState(false);
   const [offerError, setOfferError] = useState<string | null>(null);
   const [hasExistingOffer, setHasExistingOffer] = useState(false);
@@ -300,8 +301,16 @@ export default function PropertyDetailsPage() {
   const handleSubmitOffer = async () => {
     if (!currentUserId || !id || submittingOffer) return;
 
+    // Validate offer amount
+    const amount = parseFloat(offerAmount);
+    if (!offerAmount || isNaN(amount) || amount <= 0) {
+      setOfferAmountError('Please enter a valid offer amount greater than 0.');
+      return;
+    }
+
     setSubmittingOffer(true);
     setOfferError(null);
+    setOfferAmountError(null);
 
     try {
       const { data: { user }, error: userError } = await supabase.auth.getUser();
@@ -333,6 +342,7 @@ export default function PropertyDetailsPage() {
           user_id: user.id,
           property_id: Number(id),
           offer_type: offerType,
+          offer_amount: amount,
           status: 'pending',
           submitted_at: new Date().toISOString(),
         });
@@ -347,6 +357,7 @@ export default function PropertyDetailsPage() {
         setExistingOfferStatus('pending');
         setOfferAmount('');
         setOfferType('buy');
+        setOfferAmountError(null);
       }
     } catch (err) {
       console.error('Error submitting offer:', err);
@@ -977,7 +988,34 @@ export default function PropertyDetailsPage() {
                   </div>
                 </div>
 
-                {/* Optional Message/Amount - can be added later if needed */}
+                {/* Offer Amount */}
+                <div>
+                  <label htmlFor="offerAmount" className="block text-sm font-medium text-gray-700 mb-2">
+                    Offer Amount (£)
+                  </label>
+                  <input
+                    id="offerAmount"
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    required
+                    value={offerAmount}
+                    onChange={(e) => {
+                      setOfferAmount(e.target.value);
+                      setOfferAmountError(null);
+                    }}
+                    disabled={submittingOffer}
+                    className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                      offerAmountError
+                        ? 'border-red-300 focus:ring-red-500'
+                        : 'border-gray-300'
+                    } ${submittingOffer ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'bg-white'}`}
+                    placeholder="Enter offer amount"
+                  />
+                  {offerAmountError && (
+                    <p className="mt-1 text-sm text-red-600">{offerAmountError}</p>
+                  )}
+                </div>
               </div>
 
               <div className="flex gap-4 mt-6">
@@ -986,6 +1024,8 @@ export default function PropertyDetailsPage() {
                     if (!submittingOffer) {
                       setShowOfferModal(false);
                       setOfferError(null);
+                      setOfferAmountError(null);
+                      setOfferAmount('');
                     }
                   }}
                   disabled={submittingOffer}
@@ -995,8 +1035,8 @@ export default function PropertyDetailsPage() {
                 </button>
                 <button
                   onClick={handleSubmitOffer}
-                  disabled={submittingOffer}
-                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  disabled={submittingOffer || !offerAmount || parseFloat(offerAmount) <= 0}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submittingOffer ? 'Submitting...' : 'Submit Offer'}
                 </button>

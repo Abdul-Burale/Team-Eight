@@ -51,11 +51,17 @@ export default function OfferCard({ offer, buyer, property, onStatusUpdate }: Of
   };
 
   // Format offer amount (could be number or string like "£2,500/month")
-  const formatOfferAmount = (amount: number | string) => {
+  const formatOfferAmount = (amount: number | string | null | undefined) => {
+    if (amount === null || amount === undefined) {
+      return '---';
+    }
     if (typeof amount === 'string') {
       return amount;
     }
-    return formatPrice(amount);
+    if (isNaN(amount) || amount <= 0) {
+      return '---';
+    }
+    return `£${Number(amount).toLocaleString()}`;
   };
 
   // Format date
