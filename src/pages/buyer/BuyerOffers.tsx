@@ -5,30 +5,13 @@ import BuyerSidebar from "../../components/buyer/BuyerSidebar";
 import BuyerHeader from "../../components/buyer/BuyerHeader";
 import OfferListItem from "../../components/buyer/OfferListItem";
 
-interface Offer {
-  id: number;
-  user_id: string;
-  property_id: number;
-  offer_type: string;
-  offer_amount: number | string;
-  status: "pending" | "accepted" | "rejected";
-  submitted_at: string;
-  properties?: {
-    id: number;
-    title: string;
-    location: string;
-    city: string;
-    image_url?: string;
-  };
-}
-
-type BuyerOffer = {
+export type BuyerOffer = {
   id: number;
   user_id: string;
   property_id: number;
   offer_amount: number;
   offer_type: string;
-  status: string;
+  status: 'pending' | 'accepted' | 'rejected';
   submitted_at: string;
   properties: {
     id: number;

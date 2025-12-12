@@ -1,28 +1,11 @@
 import { MoreVertical } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import type { BuyerOffer } from '../../pages/buyer/BuyerOffers';
 
-interface Property {
-  id: number;
-  title: string;
-  location: string;
-  city: string;
-  image_url?: string;
-}
-
-interface Offer {
-  id: number;
-  property_id: number;
-  offer_type: string;
-  offer_amount: number | string;
-  status: 'pending' | 'accepted' | 'rejected';
-  submitted_at: string;
-  properties?: Property;
-}
-
-interface OfferListItemProps {
-  offer: Offer;
-}
+type OfferListItemProps = {
+  offer: BuyerOffer;
+};
 
 export default function OfferListItem({ offer }: OfferListItemProps) {
   const navigate = useNavigate();
@@ -61,13 +44,13 @@ export default function OfferListItem({ offer }: OfferListItemProps) {
   const property = offer.properties;
   if (!property) return null;
 
-  const location = `${property.location || ''}${property.city ? (property.location ? ', ' : '') + property.city : ''}`;
+  const location = property.location || '';
   const formattedDate = format(new Date(offer.submitted_at), 'MMM d, yyyy');
 
   const handleCardClick = () => {
     // Safety check: ensure property_id exists
     // Use property_id from offer or fallback to property.id
-    const propertyId = offer.property_id || property?.id;
+    const propertyId = offer.property_id || property.id;
     if (propertyId) {
       navigate(`/property/${propertyId}`);
     }
