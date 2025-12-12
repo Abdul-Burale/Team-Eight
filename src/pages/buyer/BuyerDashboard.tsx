@@ -9,6 +9,7 @@ import SavedPropertyCard from '../../components/buyer/SavedPropertyCard';
 import OfferListItem from '../../components/buyer/OfferListItem';
 import AlertListItem from '../../components/buyer/AlertListItem';
 import { Heart, FileText, CheckCircle, Bell } from 'lucide-react';
+import { BuyerOffer } from '../../types/buyerOffer';
 
 interface SavedProperty {
   id: number;
@@ -30,22 +31,6 @@ interface SavedProperty {
   };
 }
 
-interface Offer {
-  id: number;
-  user_id: string;
-  property_id: number;
-  offer_type: string;
-  offer_amount: number | string;
-  status: 'pending' | 'accepted' | 'rejected';
-  submitted_at: string;
-  properties?: {
-    id: number;
-    title: string;
-    location: string;
-    city: string;
-    image_url?: string;
-  };
-}
 
 interface Alert {
   id: number;
@@ -64,7 +49,7 @@ export default function BuyerDashboard() {
   
   // Data states
   const [savedProperties, setSavedProperties] = useState<SavedProperty[]>([]);
-  const [offers, setOffers] = useState<Offer[]>([]);
+  const [offers, setOffers] = useState<BuyerOffer[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
 
   // Validate userId from URL matches current session user
@@ -146,14 +131,49 @@ export default function BuyerDashboard() {
         // Fetch offers with property details
         const { data: offersData, error: offersError } = await supabase
           .from('offers')
-          .select('*, properties(*)')
+          .select(`
+            id,
+            user_id,
+            property_id,
+            offer_amount,
+            offer_type,
+            status,
+            submitted_at,
+            properties (
+              id,
+              title,
+              location,
+              image_url
+            )
+          `)
           .eq('user_id', user.id)
           .order('submitted_at', { ascending: false });
 
         if (offersError) {
           console.error('Error fetching offers:', offersError);
         } else if (offersData) {
-          setOffers(offersData as Offer[]);
+          // Normalize offer_amount to number and ensure properties structure matches BuyerOffer
+          const normalized: BuyerOffer[] = (offersData ?? []).map((o: any) => ({
+            id: o.id,
+            user_id: o.user_id,
+            property_id: o.property_id,
+            offer_amount: Number(o.offer_amount),
+            offer_type: o.offer_type,
+            status: o.status,
+            submitted_at: o.submitted_at,
+            properties: o.properties ? {
+              id: o.properties.id,
+              title: o.properties.title,
+              location: o.properties.location,
+              image_url: o.properties.image_url || '',
+            } : {
+              id: 0,
+              title: '',
+              location: '',
+              image_url: '',
+            },
+          }));
+          setOffers(normalized);
         }
 
         // Fetch alerts

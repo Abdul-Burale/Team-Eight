@@ -1,7 +1,7 @@
 import { MoreVertical } from 'lucide-react';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import type { BuyerOffer } from '../../pages/buyer/BuyerOffers';
+import type { BuyerOffer } from '../../types/buyerOffer';
 
 type OfferListItemProps = {
   offer: BuyerOffer;

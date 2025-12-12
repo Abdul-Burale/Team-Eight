@@ -4,22 +4,7 @@ import { supabase } from "../../supabase/client";
 import BuyerSidebar from "../../components/buyer/BuyerSidebar";
 import BuyerHeader from "../../components/buyer/BuyerHeader";
 import OfferListItem from "../../components/buyer/OfferListItem";
-
-export type BuyerOffer = {
-  id: number;
-  user_id: string;
-  property_id: number;
-  offer_amount: number;
-  offer_type: string;
-  status: 'pending' | 'accepted' | 'rejected';
-  submitted_at: string;
-  properties: {
-    id: number;
-    title: string;
-    location: string;
-    image_url: string;
-  };
-};
+import { BuyerOffer } from "../../types/buyerOffer";
 
 export default function BuyerOffers() {
   const { userId } = useParams<{ userId: string }>();
@@ -92,7 +77,12 @@ export default function BuyerOffers() {
         console.error("Error fetching offers:", error);
         setOffers([]);
       } else {
-        setOffers(data || []);
+        // Normalize offer_amount to number before setState
+        const normalized = (data ?? []).map((o: any) => ({
+          ...o,
+          offer_amount: Number(o.offer_amount),
+        }));
+        setOffers(normalized);
       }
 
       setLoading(false);
