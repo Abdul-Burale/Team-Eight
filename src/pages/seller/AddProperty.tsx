@@ -141,84 +141,75 @@ export default function AddProperty() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrors({});
-
-    if (!validateForm()) {
-      return;
-    }
-
+  
+    if (!validateForm()) return;
+  
     setLoading(true);
-
+  
     try {
-      // Get authenticated user's ID
       const { data: userData, error: userError } = await supabase.auth.getUser();
-      
       if (userError || !userData?.user) {
-        console.error('Auth error:', userError);
-        setErrors({ submit: 'You must be logged in to create a property listing.' });
+        setErrors({ submit: 'You must be logged in.' });
         setLoading(false);
         return;
       }
-
+  
       const user = userData.user;
-
-      // Upload image first
+  
+      // Upload image FIRST (same as before)
       const imageUrl = await uploadImageToSupabase();
-
-      if (!imageUrl) {
-        throw new Error('Failed to upload image');
-      }
-
-      // Insert property into Supabase
-      const { error } = await supabase
-        .from('properties')
-        .insert({
-          title: title.trim(),
-          description: description.trim(),
-          price: Number(price),
-          location: streetAddress.trim(),
-          city: city.trim(),
-          postcode: postcode.trim(),
-          bedrooms: Number(bedrooms),
-          property_type: propertyType,
-          listing_type: listingType,
-          near_park: nearPark,
-          near_school: nearSchool,
-          noise_level: noiseLevel,
-          image_url: imageUrl,
-          virtual_tour_link: virtualTourLink.trim() && virtualTourLink !== 'https://your-virtual-tour-link.com' 
-            ? virtualTourLink.trim() 
+      if (!imageUrl) throw new Error('Failed to upload image');
+  
+      // Build listing payload (DO NOT INSERT)
+      const listing = {
+        title: title.trim(),
+        description: description.trim(),
+        price: Number(price),
+        location: streetAddress.trim(),
+        city: city.trim(),
+        postcode: postcode.trim(),
+        bedrooms: Number(bedrooms),
+        property_type: propertyType,
+        listing_type: listingType,
+        near_park: nearPark,
+        near_school: nearSchool,
+        noise_level: noiseLevel,
+        image_url: imageUrl,
+        virtual_tour_link:
+          virtualTourLink.trim() &&
+          virtualTourLink !== 'https://your-virtual-tour-link.com'
+            ? virtualTourLink.trim()
             : null,
-          user_id: user.id,
-          status: 'active',
-          views: 0,
-        })
-        .select();
-
-      if (error) {
-        console.error('RLS ERROR:', error.message);
-        
-        // Check if it's an RLS error
-        if (error.message.includes('Row Level Security') || error.message.includes('policy') || error.code === '42501') {
-          setErrors({ submit: 'You are not allowed to insert or view this data. Please check your permissions.' });
-        } else {
-          setErrors({ submit: error.message || 'Failed to create property listing. Please try again.' });
+      };
+  
+      // 🔥 CALL STRIPE CHECKOUT EDGE FUNCTION
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout-session`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            userId: user.id,
+            listing,
+          }),
         }
-        setLoading(false);
-        return;
-      }
-
-      // Success - redirect to properties page
-      if (urlUserId) {
-        navigate(`/seller/${urlUserId}/properties`);
-      }
-    } catch (error: any) {
-      console.error('Error creating property:', error);
-      setErrors({ submit: error.message || 'Failed to create property listing. Please try again.' });
-    } finally {
+      );
+  
+      const data = await res.json();
+      if (!data?.url) throw new Error('Failed to create checkout session');
+  
+      // 🔁 REDIRECT TO STRIPE
+      window.location.href = data.url;
+    } catch (err: any) {
+      console.error(err);
+      setErrors({ submit: err.message || 'Checkout failed' });
       setLoading(false);
     }
   };
-
+  
   const handleCancel = () => {
     if (urlUserId) {
       navigate(`/seller/${urlUserId}/properties`);
